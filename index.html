@@ -439,6 +439,17 @@
   ::-webkit-scrollbar { width: 4px; }
   ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  /* tag pill visual distinction */
+  .tag {
+    display: inline-flex; align-items: center; gap: 3px;
+    background: var(--accent); color: #fff;
+    font-size: 10px; font-weight: 700; letter-spacing: 0.07em;
+    text-transform: uppercase; padding: 2px 8px 2px 8px;
+    border-radius: 99px; line-height: 1.6;
+  }
+  .remove-tag { color: rgba(255,255,255,0.75); font-size: 13px; line-height: 1; cursor: pointer; }
+  .remove-tag:hover { color: #fff; }
 </style>
 </head>
 <body>
@@ -465,7 +476,7 @@
     <div class="notes-topbar">
       <div class="notes-title">
         <div class="dot" id="activeNotebookDot"></div>
-        <span id="activeNotebookTitle">—</span>
+        <span id="activeNotebookTitle">â</span>
       </div>
       <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted)" id="noteCountLabel"></div>
     </div>
@@ -492,18 +503,18 @@
 </div>
 
 <script>
-// ─── PALETTE ────────────────────────────────────────────────────────────────
+// âââ PALETTE ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 const COLORS = [
   '#b85c38','#d4a843','#5b8c5a','#4a7fa5','#7b5ea7',
   '#c96480','#6b8f71','#8c7851','#4a6fa5','#888580'
 ];
 
 const PLACEHOLDERS = [
-  'Start typing…', 'Add a note…', 'What\'s on your mind?',
-  'Write something…', 'Jot it down…'
+  'Start typingâ¦', 'Add a noteâ¦', 'What\'s on your mind?',
+  'Write somethingâ¦', 'Jot it downâ¦'
 ];
 
-// ─── STATE ───────────────────────────────────────────────────────────────────
+// âââ STATE âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 let state = loadState() || {
   notebooks: [
     { id: 'n1', name: 'TBP', color: COLORS[0] },
@@ -512,10 +523,10 @@ let state = loadState() || {
     { id: 'n4', name: 'Cloud', color: COLORS[4] },
   ],
   notes: {
-    n1: [makeNote(), makeNote(), makeNote(), makeNote()],
-    n2: [makeNote(), makeNote(), makeNote(), makeNote()],
-    n3: [makeNote(), makeNote(), makeNote(), makeNote()],
-    n4: [makeNote(), makeNote(), makeNote(), makeNote()],
+    n1: [makeNote()],
+    n2: [makeNote()],
+    n3: [makeNote()],
+    n4: [makeNote()],
   },
   activeNotebook: 'n1'
 };
@@ -541,7 +552,7 @@ function loadState() {
   try { return JSON.parse(localStorage.getItem('notes_app_v2')); } catch { return null; }
 }
 
-// ─── RENDER SIDEBAR ──────────────────────────────────────────────────────────
+// âââ RENDER SIDEBAR ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 function renderSidebar() {
   const list = document.getElementById('notebookList');
   list.innerHTML = '';
@@ -555,13 +566,13 @@ function renderSidebar() {
       <span class="notebook-name">${escHtml(nb.name)}</span>
       <span class="notebook-count">${count}</span>
     `;
-    div.addEventListener('click', () => { state.activeNotebook = nb.id; saveState(); render(); });
+    div.addEventListener('click', () => { state.activeNotebook = nb.id; state.activeNote = 0; saveState(); render(); });
     div.addEventListener('contextmenu', e => { e.preventDefault(); showNotebookCtx(e, nb); });
     list.appendChild(div);
   });
 }
 
-// ─── RENDER NOTES GRID ───────────────────────────────────────────────────────
+// âââ RENDER NOTES GRID âââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 function renderNotes() {
   const nb = state.notebooks.find(n=>n.id===state.activeNotebook);
   if (!nb) return;
@@ -573,9 +584,8 @@ function renderNotes() {
   document.getElementById('noteCountLabel').textContent = notes.filter(n=>n.text.trim()).length + ' entries';
 
   const grid = document.getElementById('notesGrid');
-  // ensure 4 slots
-  while (state.notes[nb.id].length < 4) state.notes[nb.id].push(makeNote());
-  const four = state.notes[nb.id].slice(0,4);
+  // notes grow dynamically — no padding
+  const four = state.notes[nb.id];
 
   grid.innerHTML = '';
   four.forEach((note, idx) => {
@@ -585,7 +595,7 @@ function renderNotes() {
     card.dataset.idx = idx;
 
     const tagsHtml = (note.tags||[]).map(t =>
-      `<span class="tag">${escHtml(t)}<span class="remove-tag" data-tag="${escHtml(t)}">×</span></span>`
+      `<span class="tag">${escHtml(t)}<span class="remove-tag" data-tag="${escHtml(t)}">Ã</span></span>`
     ).join('');
 
     card.innerHTML = `
@@ -594,7 +604,7 @@ function renderNotes() {
           <div class="note-color-dot" style="background:${nb.color}" data-color-trigger></div>
           <input class="note-title" value="Note ${idx+1}" spellcheck="false" />
         </div>
-        <button class="note-menu-btn" title="Options">⋯</button>
+        <button class="note-menu-btn" title="Options">â¯</button>
       </div>
       <div class="note-body">
         <textarea class="note-textarea" placeholder="${PLACEHOLDERS[idx % PLACEHOLDERS.length]}" spellcheck="false">${escHtml(note.text)}</textarea>
@@ -648,7 +658,7 @@ function renderNotes() {
   });
 }
 
-// ─── COLOR PICKER ────────────────────────────────────────────────────────────
+// âââ COLOR PICKER ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 let colorPickerTarget = null;
 function showColorPicker(anchor, nb) {
   const picker = document.getElementById('colorPicker');
@@ -673,7 +683,7 @@ function showColorPicker(anchor, nb) {
   colorPickerTarget = nb;
 }
 
-// ─── CONTEXT MENUS ───────────────────────────────────────────────────────────
+// âââ CONTEXT MENUS âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 function showNotebookCtx(e, nb) {
   const menu = document.getElementById('ctxMenu');
   menu.innerHTML = `
@@ -718,7 +728,7 @@ function posCtx(menu, x, y) {
 
 function hideCtx() { document.getElementById('ctxMenu').classList.add('hidden'); }
 
-// ─── MODAL ───────────────────────────────────────────────────────────────────
+// âââ MODAL âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 let modalCb = null;
 function showModal(title, defaultVal, cb) {
   document.getElementById('modalTitle').textContent = title;
@@ -743,14 +753,14 @@ document.getElementById('modalInput').addEventListener('keydown', e => {
   if (e.key==='Escape') hideModal();
 });
 
-// ─── TOOLBAR ACTIONS ─────────────────────────────────────────────────────────
+// âââ TOOLBAR ACTIONS âââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 document.getElementById('addNotebookBtn').onclick = () => {
   showModal('New Notebook', '', val => {
     if (!val) return;
     const id = uid();
     const color = COLORS[state.notebooks.length % COLORS.length];
     state.notebooks.push({ id, name: val, color });
-    state.notes[id] = [makeNote(), makeNote(), makeNote(), makeNote()];
+    state.notes[id] = [makeNote()];
     state.activeNotebook = id;
     saveState(); render();
   });
@@ -763,7 +773,7 @@ document.getElementById('addNoteBtn').onclick = () => {
   saveState(); renderNotes();
 };
 
-// ─── CLOSE POPUPS ────────────────────────────────────────────────────────────
+// âââ CLOSE POPUPS ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 document.addEventListener('click', e => {
   if (!e.target.closest('[data-color-trigger]') && !e.target.closest('#colorPicker'))
     document.getElementById('colorPicker').classList.add('hidden');
@@ -776,16 +786,16 @@ document.addEventListener('contextmenu', e => {
   if (!e.target.closest('.notebook-item')) e.preventDefault();
 });
 
-// ─── DEBOUNCE ────────────────────────────────────────────────────────────────
+// âââ DEBOUNCE ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 let saveTimer;
 function debounceSave() { clearTimeout(saveTimer); saveTimer = setTimeout(saveState, 600); }
 
-// ─── HELPERS ─────────────────────────────────────────────────────────────────
+// âââ HELPERS âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 function escHtml(s='') {
   return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
-// ─── MAIN RENDER ─────────────────────────────────────────────────────────────
+// âââ MAIN RENDER âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 function render() {
   renderSidebar();
   renderNotes();
