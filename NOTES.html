@@ -1,0 +1,797 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Notes</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&family=DM+Sans:wght@300;400&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #f5f3ee;
+    --surface: #eceae4;
+    --border: #d4d0c8;
+    --text: #1a1916;
+    --muted: #888580;
+    --accent: #1a1916;
+    --tag-bg: #e0ddd6;
+    --danger: #c0392b;
+  }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* TOP BAR */
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 24px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+
+  .logo {
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+    text-transform: uppercase;
+  }
+
+  .header-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .btn {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    padding: 5px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.15s;
+    text-transform: uppercase;
+  }
+
+  .btn:hover { border-color: var(--text); color: var(--text); }
+  .btn.primary { background: var(--text); color: var(--bg); border-color: var(--text); }
+  .btn.primary:hover { opacity: 0.8; }
+
+  /* MAIN LAYOUT */
+  .workspace {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+  }
+
+  /* SIDEBAR */
+  .sidebar {
+    width: 200px;
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    overflow-y: auto;
+  }
+
+  .sidebar-section {
+    padding: 16px 16px 8px;
+  }
+
+  .sidebar-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+
+  .notebook-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.12s;
+    font-size: 13px;
+    color: var(--text);
+    user-select: none;
+    position: relative;
+  }
+
+  .notebook-item:hover { background: var(--surface); }
+  .notebook-item.active { background: var(--tag-bg); }
+
+  .notebook-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    transition: background 0.2s;
+  }
+
+  .notebook-name {
+    flex: 1;
+    font-size: 13px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .notebook-count {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+  }
+
+  .sidebar-sep {
+    height: 1px;
+    background: var(--border);
+    margin: 8px 16px;
+  }
+
+  /* NOTE GRID */
+  .notes-area {
+    flex: 1;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .notes-topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 20px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+
+  .notes-title {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    color: var(--text);
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .notes-title .dot {
+    width: 9px; height: 9px;
+    border-radius: 50%;
+  }
+
+  .notes-grid {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 1fr 1fr;
+    gap: 1px;
+    background: var(--border);
+    overflow: hidden;
+  }
+
+  .note-card {
+    background: var(--bg);
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    overflow: hidden;
+    transition: background 0.15s;
+  }
+
+  .note-card:hover { background: #f8f6f1; }
+
+  .note-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 16px 10px;
+    flex-shrink: 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .note-title-wrap {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+    min-width: 0;
+  }
+
+  .note-color-dot {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    cursor: pointer;
+  }
+
+  .note-title {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    color: var(--text);
+    text-transform: uppercase;
+    background: none;
+    border: none;
+    outline: none;
+    width: 100%;
+    cursor: text;
+  }
+
+  .note-menu-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--muted);
+    font-size: 16px;
+    padding: 0 2px;
+    line-height: 1;
+    opacity: 0;
+    transition: opacity 0.15s;
+  }
+
+  .note-card:hover .note-menu-btn { opacity: 1; }
+
+  .note-body {
+    flex: 1;
+    padding: 14px 16px;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+
+  .note-textarea {
+    width: 100%;
+    height: 100%;
+    min-height: 80px;
+    background: none;
+    border: none;
+    outline: none;
+    resize: none;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    font-weight: 300;
+    line-height: 1.8;
+    color: var(--text);
+    letter-spacing: 0.02em;
+  }
+
+  .note-textarea::placeholder { color: var(--muted); }
+
+  .note-footer {
+    padding: 8px 16px 10px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    min-height: 36px;
+    flex-shrink: 0;
+  }
+
+  .tag {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.04em;
+    background: var(--tag-bg);
+    color: var(--muted);
+    padding: 2px 8px;
+    border-radius: 3px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .tag .remove-tag {
+    cursor: pointer;
+    font-size: 11px;
+    line-height: 1;
+    color: var(--muted);
+  }
+
+  .tag .remove-tag:hover { color: var(--danger); }
+
+  .tag-input {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    background: none;
+    border: none;
+    outline: none;
+    color: var(--muted);
+    width: 60px;
+  }
+
+  /* COLOR PICKER POPUP */
+  .color-picker-popup {
+    position: absolute;
+    top: 44px;
+    left: 12px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px;
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    width: 144px;
+    z-index: 100;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+  }
+
+  .color-swatch {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: transform 0.12s, border-color 0.12s;
+  }
+
+  .color-swatch:hover { transform: scale(1.15); }
+  .color-swatch.selected { border-color: var(--text); }
+
+  /* CONTEXT MENU */
+  .ctx-menu {
+    position: fixed;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 6px;
+    z-index: 200;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    min-width: 140px;
+  }
+
+  .ctx-item {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.04em;
+    padding: 7px 12px;
+    border-radius: 5px;
+    cursor: pointer;
+    color: var(--text);
+    transition: background 0.1s;
+  }
+
+  .ctx-item:hover { background: var(--surface); }
+  .ctx-item.danger { color: var(--danger); }
+
+  /* MODAL */
+  .overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.3);
+    z-index: 300;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(2px);
+  }
+
+  .modal {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 24px;
+    width: 320px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+  }
+
+  .modal-title {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 16px;
+    color: var(--muted);
+  }
+
+  .modal input {
+    width: 100%;
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    padding: 9px 12px;
+    outline: none;
+    color: var(--text);
+    margin-bottom: 12px;
+    transition: border-color 0.15s;
+  }
+
+  .modal input:focus { border-color: var(--text); }
+
+  .modal-actions {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+    margin-top: 4px;
+  }
+
+  .hidden { display: none !important; }
+
+  /* SCROLLBAR */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+</style>
+</head>
+<body>
+
+<header>
+  <span class="logo">notes</span>
+  <div class="header-actions">
+    <button class="btn" id="addNotebookBtn">+ notebook</button>
+    <button class="btn primary" id="addNoteBtn">+ note</button>
+  </div>
+</header>
+
+<div class="workspace">
+  <!-- SIDEBAR -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-label">Notebooks</div>
+      <div id="notebookList"></div>
+    </div>
+  </aside>
+
+  <!-- NOTES AREA -->
+  <div class="notes-area">
+    <div class="notes-topbar">
+      <div class="notes-title">
+        <div class="dot" id="activeNotebookDot"></div>
+        <span id="activeNotebookTitle">—</span>
+      </div>
+      <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted)" id="noteCountLabel"></div>
+    </div>
+    <div class="notes-grid" id="notesGrid"></div>
+  </div>
+</div>
+
+<!-- COLOR PICKER -->
+<div class="color-picker-popup hidden" id="colorPicker"></div>
+
+<!-- CONTEXT MENU -->
+<div class="ctx-menu hidden" id="ctxMenu"></div>
+
+<!-- MODAL -->
+<div class="overlay hidden" id="overlay">
+  <div class="modal" id="modal">
+    <div class="modal-title" id="modalTitle">New Notebook</div>
+    <input type="text" id="modalInput" placeholder="Name..." autocomplete="off" />
+    <div class="modal-actions">
+      <button class="btn" id="modalCancel">Cancel</button>
+      <button class="btn primary" id="modalConfirm">Create</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── PALETTE ────────────────────────────────────────────────────────────────
+const COLORS = [
+  '#b85c38','#d4a843','#5b8c5a','#4a7fa5','#7b5ea7',
+  '#c96480','#6b8f71','#8c7851','#4a6fa5','#888580'
+];
+
+const PLACEHOLDERS = [
+  'Start typing…', 'Add a note…', 'What\'s on your mind?',
+  'Write something…', 'Jot it down…'
+];
+
+// ─── STATE ───────────────────────────────────────────────────────────────────
+let state = loadState() || {
+  notebooks: [
+    { id: 'n1', name: 'TBP', color: COLORS[0] },
+    { id: 'n2', name: 'YBP', color: COLORS[3] },
+    { id: 'n3', name: 'WPP', color: COLORS[2] },
+    { id: 'n4', name: 'Cloud', color: COLORS[4] },
+  ],
+  notes: {
+    n1: [makeNote(), makeNote(), makeNote(), makeNote()],
+    n2: [makeNote(), makeNote(), makeNote(), makeNote()],
+    n3: [makeNote(), makeNote(), makeNote(), makeNote()],
+    n4: [makeNote(), makeNote(), makeNote(), makeNote()],
+  },
+  activeNotebook: 'n1'
+};
+
+function makeNote(text='', tags=[]) {
+  return { id: uid(), text, tags };
+}
+
+function uid() { return Math.random().toString(36).slice(2,9); }
+
+function saveState() {
+  // Sync textareas before saving
+  document.querySelectorAll('.note-textarea').forEach(ta => {
+    const noteId = ta.closest('[data-note-id]')?.dataset.noteId;
+    const nb = state.activeNotebook;
+    const note = state.notes[nb]?.find(n=>n.id===noteId);
+    if (note) note.text = ta.value;
+  });
+  localStorage.setItem('notes_app_v2', JSON.stringify(state));
+}
+
+function loadState() {
+  try { return JSON.parse(localStorage.getItem('notes_app_v2')); } catch { return null; }
+}
+
+// ─── RENDER SIDEBAR ──────────────────────────────────────────────────────────
+function renderSidebar() {
+  const list = document.getElementById('notebookList');
+  list.innerHTML = '';
+  state.notebooks.forEach(nb => {
+    const div = document.createElement('div');
+    div.className = 'notebook-item' + (nb.id === state.activeNotebook ? ' active' : '');
+    div.dataset.id = nb.id;
+    const count = (state.notes[nb.id] || []).filter(n=>n.text.trim()).length;
+    div.innerHTML = `
+      <div class="notebook-dot" style="background:${nb.color}"></div>
+      <span class="notebook-name">${escHtml(nb.name)}</span>
+      <span class="notebook-count">${count}</span>
+    `;
+    div.addEventListener('click', () => { state.activeNotebook = nb.id; saveState(); render(); });
+    div.addEventListener('contextmenu', e => { e.preventDefault(); showNotebookCtx(e, nb); });
+    list.appendChild(div);
+  });
+}
+
+// ─── RENDER NOTES GRID ───────────────────────────────────────────────────────
+function renderNotes() {
+  const nb = state.notebooks.find(n=>n.id===state.activeNotebook);
+  if (!nb) return;
+
+  document.getElementById('activeNotebookTitle').textContent = nb.name;
+  document.getElementById('activeNotebookDot').style.background = nb.color;
+
+  const notes = state.notes[nb.id] || [];
+  document.getElementById('noteCountLabel').textContent = notes.filter(n=>n.text.trim()).length + ' entries';
+
+  const grid = document.getElementById('notesGrid');
+  // ensure 4 slots
+  while (state.notes[nb.id].length < 4) state.notes[nb.id].push(makeNote());
+  const four = state.notes[nb.id].slice(0,4);
+
+  grid.innerHTML = '';
+  four.forEach((note, idx) => {
+    const card = document.createElement('div');
+    card.className = 'note-card';
+    card.dataset.noteId = note.id;
+    card.dataset.idx = idx;
+
+    const tagsHtml = (note.tags||[]).map(t =>
+      `<span class="tag">${escHtml(t)}<span class="remove-tag" data-tag="${escHtml(t)}">×</span></span>`
+    ).join('');
+
+    card.innerHTML = `
+      <div class="note-header">
+        <div class="note-title-wrap">
+          <div class="note-color-dot" style="background:${nb.color}" data-color-trigger></div>
+          <input class="note-title" value="Note ${idx+1}" spellcheck="false" />
+        </div>
+        <button class="note-menu-btn" title="Options">⋯</button>
+      </div>
+      <div class="note-body">
+        <textarea class="note-textarea" placeholder="${PLACEHOLDERS[idx % PLACEHOLDERS.length]}" spellcheck="false">${escHtml(note.text)}</textarea>
+      </div>
+      <div class="note-footer">
+        ${tagsHtml}
+        <input class="tag-input" placeholder="+ tag" title="Press Enter to add tag" />
+      </div>
+    `;
+
+    // textarea save
+    const ta = card.querySelector('.note-textarea');
+    ta.addEventListener('input', () => { note.text = ta.value; debounceSave(); });
+
+    // tag add
+    const tagInput = card.querySelector('.tag-input');
+    tagInput.addEventListener('keydown', e => {
+      if (e.key === 'Enter') {
+        const val = tagInput.value.trim();
+        if (val && !(note.tags||[]).includes(val)) {
+          note.tags = [...(note.tags||[]), val];
+          tagInput.value = '';
+          saveState(); renderNotes();
+        }
+      }
+    });
+
+    // tag remove
+    card.querySelectorAll('.remove-tag').forEach(btn => {
+      btn.addEventListener('click', e => {
+        e.stopPropagation();
+        const tag = btn.dataset.tag;
+        note.tags = (note.tags||[]).filter(t=>t!==tag);
+        saveState(); renderNotes();
+      });
+    });
+
+    // color dot
+    card.querySelector('[data-color-trigger]').addEventListener('click', e => {
+      e.stopPropagation();
+      showColorPicker(e.target, nb);
+    });
+
+    // menu
+    card.querySelector('.note-menu-btn').addEventListener('click', e => {
+      e.stopPropagation();
+      showNoteCtx(e, note, nb.id);
+    });
+
+    grid.appendChild(card);
+  });
+}
+
+// ─── COLOR PICKER ────────────────────────────────────────────────────────────
+let colorPickerTarget = null;
+function showColorPicker(anchor, nb) {
+  const picker = document.getElementById('colorPicker');
+  picker.innerHTML = '';
+  COLORS.forEach(c => {
+    const sw = document.createElement('div');
+    sw.className = 'color-swatch' + (nb.color===c?' selected':'');
+    sw.style.background = c;
+    sw.addEventListener('click', e => {
+      e.stopPropagation();
+      nb.color = c;
+      saveState(); render();
+      picker.classList.add('hidden');
+    });
+    picker.appendChild(sw);
+  });
+
+  const rect = anchor.getBoundingClientRect();
+  picker.style.left = rect.left + 'px';
+  picker.style.top = (rect.bottom + 6) + 'px';
+  picker.classList.remove('hidden');
+  colorPickerTarget = nb;
+}
+
+// ─── CONTEXT MENUS ───────────────────────────────────────────────────────────
+function showNotebookCtx(e, nb) {
+  const menu = document.getElementById('ctxMenu');
+  menu.innerHTML = `
+    <div class="ctx-item" id="ctx-rename">Rename</div>
+    <div class="ctx-item danger" id="ctx-delete-nb">Delete notebook</div>
+  `;
+  posCtx(menu, e.clientX, e.clientY);
+
+  document.getElementById('ctx-rename').onclick = () => {
+    hideCtx();
+    showModal('Rename Notebook', nb.name, val => {
+      if (val) { nb.name = val; saveState(); render(); }
+    });
+  };
+
+  document.getElementById('ctx-delete-nb').onclick = () => {
+    hideCtx();
+    if (state.notebooks.length <= 1) return;
+    state.notebooks = state.notebooks.filter(n=>n.id!==nb.id);
+    delete state.notes[nb.id];
+    state.activeNotebook = state.notebooks[0].id;
+    saveState(); render();
+  };
+}
+
+function showNoteCtx(e, note, nbId) {
+  const menu = document.getElementById('ctxMenu');
+  menu.innerHTML = `<div class="ctx-item danger" id="ctx-clear">Clear note</div>`;
+  posCtx(menu, e.clientX, e.clientY);
+  document.getElementById('ctx-clear').onclick = () => {
+    hideCtx();
+    note.text = ''; note.tags = [];
+    saveState(); renderNotes();
+  };
+}
+
+function posCtx(menu, x, y) {
+  menu.style.left = x + 'px';
+  menu.style.top = y + 'px';
+  menu.classList.remove('hidden');
+}
+
+function hideCtx() { document.getElementById('ctxMenu').classList.add('hidden'); }
+
+// ─── MODAL ───────────────────────────────────────────────────────────────────
+let modalCb = null;
+function showModal(title, defaultVal, cb) {
+  document.getElementById('modalTitle').textContent = title;
+  document.getElementById('modalInput').value = defaultVal || '';
+  document.getElementById('overlay').classList.remove('hidden');
+  document.getElementById('modalInput').focus();
+  modalCb = cb;
+}
+
+function hideModal() { document.getElementById('overlay').classList.add('hidden'); modalCb = null; }
+
+document.getElementById('modalConfirm').onclick = () => {
+  const val = document.getElementById('modalInput').value.trim();
+  if (modalCb) modalCb(val);
+  hideModal();
+};
+
+document.getElementById('modalCancel').onclick = hideModal;
+document.getElementById('overlay').addEventListener('click', e => { if (e.target.id==='overlay') hideModal(); });
+document.getElementById('modalInput').addEventListener('keydown', e => {
+  if (e.key==='Enter') document.getElementById('modalConfirm').click();
+  if (e.key==='Escape') hideModal();
+});
+
+// ─── TOOLBAR ACTIONS ─────────────────────────────────────────────────────────
+document.getElementById('addNotebookBtn').onclick = () => {
+  showModal('New Notebook', '', val => {
+    if (!val) return;
+    const id = uid();
+    const color = COLORS[state.notebooks.length % COLORS.length];
+    state.notebooks.push({ id, name: val, color });
+    state.notes[id] = [makeNote(), makeNote(), makeNote(), makeNote()];
+    state.activeNotebook = id;
+    saveState(); render();
+  });
+};
+
+document.getElementById('addNoteBtn').onclick = () => {
+  const nb = state.notebooks.find(n=>n.id===state.activeNotebook);
+  if (!nb) return;
+  state.notes[nb.id].unshift(makeNote());
+  saveState(); renderNotes();
+};
+
+// ─── CLOSE POPUPS ────────────────────────────────────────────────────────────
+document.addEventListener('click', e => {
+  if (!e.target.closest('[data-color-trigger]') && !e.target.closest('#colorPicker'))
+    document.getElementById('colorPicker').classList.add('hidden');
+  if (!e.target.closest('.note-menu-btn') && !e.target.closest('#ctxMenu') &&
+      !e.target.closest('.notebook-item') )
+    hideCtx();
+});
+
+document.addEventListener('contextmenu', e => {
+  if (!e.target.closest('.notebook-item')) e.preventDefault();
+});
+
+// ─── DEBOUNCE ────────────────────────────────────────────────────────────────
+let saveTimer;
+function debounceSave() { clearTimeout(saveTimer); saveTimer = setTimeout(saveState, 600); }
+
+// ─── HELPERS ─────────────────────────────────────────────────────────────────
+function escHtml(s='') {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ─── MAIN RENDER ─────────────────────────────────────────────────────────────
+function render() {
+  renderSidebar();
+  renderNotes();
+}
+
+render();
+</script>
+</body>
+</html>
