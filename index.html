@@ -131,6 +131,7 @@
 
   .notebook-name {
     flex: 1;
+    min-width: 0;
     font-size: 13px;
     white-space: nowrap;
     overflow: hidden;
@@ -476,7 +477,7 @@
     <div class="notes-topbar">
       <div class="notes-title">
         <div class="dot" id="activeNotebookDot"></div>
-        <span id="activeNotebookTitle"></span>
+        <span id="activeNotebookTitle">Â</span>
       </div>
       <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted)" id="noteCountLabel"></div>
     </div>
@@ -503,7 +504,7 @@
 </div>
 
 <script>
-//  PALETTE 
+// ÂÂÂ PALETTE ÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂ
 const COLORS = [
   '#b85c38','#d4a843','#5b8c5a','#4a7fa5','#7b5ea7',
   '#c96480','#6b8f71','#8c7851','#4a6fa5','#888580'
@@ -514,7 +515,7 @@ const PLACEHOLDERS = [
   'Write something', 'Jot it down'
 ];
 
-//  STATE 
+// ÂÂÂ STATE ÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂ
 let state = loadState() || {
   notebooks: [
     { id: 'n1', name: 'TBP', color: COLORS[0] },
@@ -563,7 +564,7 @@ function loadState() {
   try { return JSON.parse(localStorage.getItem('notes_app_v2')); } catch { return null; }
 }
 
-//  RENDER SIDEBAR 
+// ÂÂÂ RENDER SIDEBAR ÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂ
 function renderSidebar() {
   const list = document.getElementById('notebookList');
   list.innerHTML = '';
@@ -583,7 +584,7 @@ function renderSidebar() {
   });
 }
 
-//  RENDER NOTES GRID 
+// ÂÂÂ RENDER NOTES GRID ÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂ
 function renderNotes() {
   const nb = state.notebooks.find(n=>n.id===state.activeNotebook);
   if (!nb) return;
@@ -595,7 +596,7 @@ function renderNotes() {
   document.getElementById('noteCountLabel').textContent = notes.filter(n=>n.text.trim()).length + ' entries';
 
   const grid = document.getElementById('notesGrid');
-  // notes grow dynamically  no padding
+  // notes grow dynamically Â no padding
   const four = state.notes[nb.id];
 
   grid.innerHTML = '';
@@ -606,7 +607,7 @@ function renderNotes() {
     card.dataset.idx = idx;
 
     const tagsHtml = (note.tags||[]).map(t =>
-      `<span class="tag">${escHtml(t)}<span class="remove-tag" data-tag="${escHtml(t)}"></span></span>`
+      `<span class="tag">${escHtml(t)}<span class="remove-tag" data-tag="${escHtml(t)}">Â</span></span>`
     ).join('');
 
     card.innerHTML = `
@@ -615,7 +616,7 @@ function renderNotes() {
           <div class="note-color-dot" style="background:${nb.color}" data-color-trigger></div>
           <input class="note-title" value="Note ${idx+1}" spellcheck="false" />
         </div>
-        <button class="note-menu-btn" title="Options">¯</button>
+        <button class="note-menu-btn" title="Options">ÂÂ¯</button>
       </div>
       <div class="note-body">
         <textarea class="note-textarea" placeholder="${PLACEHOLDERS[idx % PLACEHOLDERS.length]}" spellcheck="false">${escHtml(note.text)}</textarea>
@@ -669,7 +670,7 @@ function renderNotes() {
   });
 }
 
-//  COLOR PICKER 
+// ÂÂÂ COLOR PICKER ÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂ
 let colorPickerTarget = null;
 function showColorPicker(anchor, nb) {
   const picker = document.getElementById('colorPicker');
@@ -694,7 +695,7 @@ function showColorPicker(anchor, nb) {
   colorPickerTarget = nb;
 }
 
-//  CONTEXT MENUS 
+// ÂÂÂ CONTEXT MENUS ÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂ
 function showNotebookCtx(e, nb) {
   const menu = document.getElementById('ctxMenu');
   menu.innerHTML = `
@@ -739,7 +740,7 @@ function posCtx(menu, x, y) {
 
 function hideCtx() { document.getElementById('ctxMenu').classList.add('hidden'); }
 
-//  MODAL 
+// ÂÂÂ MODAL ÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂ
 let modalCb = null;
 function showModal(title, defaultVal, cb) {
   document.getElementById('modalTitle').textContent = title;
@@ -764,7 +765,7 @@ document.getElementById('modalInput').addEventListener('keydown', e => {
   if (e.key==='Escape') hideModal();
 });
 
-//  TOOLBAR ACTIONS 
+// ÂÂÂ TOOLBAR ACTIONS ÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂ
 document.getElementById('addNotebookBtn').onclick = () => {
   showModal('New Notebook', '', val => {
     if (!val) return;
@@ -784,7 +785,7 @@ document.getElementById('addNoteBtn').onclick = () => {
   saveState(); renderNotes();
 };
 
-//  CLOSE POPUPS 
+// ÂÂÂ CLOSE POPUPS ÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂ
 document.addEventListener('click', e => {
   if (!e.target.closest('[data-color-trigger]') && !e.target.closest('#colorPicker'))
     document.getElementById('colorPicker').classList.add('hidden');
@@ -797,16 +798,16 @@ document.addEventListener('contextmenu', e => {
   if (!e.target.closest('.notebook-item')) e.preventDefault();
 });
 
-//  DEBOUNCE 
+// ÂÂÂ DEBOUNCE ÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂ
 let saveTimer;
 function debounceSave() { clearTimeout(saveTimer); saveTimer = setTimeout(saveState, 600); }
 
-//  HELPERS 
+// ÂÂÂ HELPERS ÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂ
 function escHtml(s='') {
   return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
-//  MAIN RENDER 
+// ÂÂÂ MAIN RENDER ÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂ
 function render() {
   renderSidebar();
   renderNotes();
