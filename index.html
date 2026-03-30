@@ -273,6 +273,17 @@
     0%,100% { box-shadow: 0 0 10px rgba(255,23,68,0.6); transform: scale(1); }
     50% { box-shadow: 0 0 18px rgba(255,23,68,0.9); transform: scale(1.1); }
   }
+  .note-mic-btn.polishing,
+  .note-card .note-mic-btn.polishing,
+  .note-card:hover .note-mic-btn.polishing {
+    opacity: 1 !important; color: #fff; background: #1565C0;
+    box-shadow: 0 0 10px rgba(21,101,192,0.6);
+    animation: micbreathe 1.4s ease-in-out infinite; cursor: default;
+  }
+  @keyframes micbreathe {
+    0%,100% { box-shadow: 0 0 8px rgba(21,101,192,0.5); }
+    50%      { box-shadow: 0 0 18px rgba(21,101,192,0.85); }
+  }
 
   .note-header {
     display: flex;
@@ -830,6 +841,7 @@ function renderPanel(nbId, gridEl, titleEl, countEl) {
     if (!SR) { micBtn.style.display = 'none'; } else {
       micBtn.addEventListener('click', e => {
         e.stopPropagation();
+        if (micBtn.classList.contains('polishing')) return;
         if (window._activeRec) {
           window._activeRec.stop();
           if (window._activeMicBtn) window._activeMicBtn.classList.remove('recording');
@@ -841,10 +853,24 @@ function renderPanel(nbId, gridEl, titleEl, countEl) {
         rec.lang = 'en-US';
         rec.onresult = ev => {
           const text = Array.from(ev.results).map(r => r[0].transcript).join(' ');
-          ta.focus();
-          document.execCommand('insertText', false, text + ' ');
-          note.text = ta.innerHTML;
-          debounceSave();
+          rec.stop();
+          micBtn.classList.add('polishing');
+          const insertText = str => {
+            ta.focus();
+            document.execCommand('insertText', false, str + ' ');
+            note.text = ta.innerHTML;
+            debounceSave();
+          };
+          fetch('http://localhost:3000/polish', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ text }),
+            signal: AbortSignal.timeout(10000),
+          })
+            .then(r => r.ok ? r.json() : Promise.reject())
+            .then(data => insertText(data.polished || text))
+            .catch(() => insertText(text))
+            .finally(() => micBtn.classList.remove('polishing'));
         };
         rec.onend = rec.onerror = () => {
           micBtn.classList.remove('recording');
