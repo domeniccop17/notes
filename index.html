@@ -304,6 +304,33 @@
   }
 
   .note-textarea::placeholder { color: var(--muted); }
+  .note-textarea:empty::before { content: attr(data-placeholder); color: var(--muted); pointer-events: none; display: block; }
+
+  .format-toolbar {
+    position: fixed;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+    display: none;
+    gap: 2px;
+    padding: 4px;
+    z-index: 500;
+    transform: translateX(-50%);
+  }
+  .format-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 4px 10px;
+    border-radius: 4px;
+    color: var(--text);
+    font-size: 12px;
+    font-family: 'DM Mono', monospace;
+    letter-spacing: 0.03em;
+    white-space: nowrap;
+  }
+  .format-btn:hover { background: var(--border); }
 
   .note-footer {
     padding: 8px 16px 10px;
@@ -513,6 +540,13 @@
 <!-- CONTEXT MENU -->
 <div class="ctx-menu hidden" id="ctxMenu"></div>
 
+<!-- FORMAT TOOLBAR -->
+<div class="format-toolbar" id="formatToolbar">
+  <button class="format-btn" id="fmtBold"><b>caractère gras</b></button>
+  <button class="format-btn" id="fmtUnderline"><u>underline</u></button>
+  <button class="format-btn" id="fmtBullet">• bullet</button>
+</div>
+
 <!-- MODAL -->
 <div class="overlay hidden" id="overlay">
   <div class="modal" id="modal">
@@ -600,7 +634,7 @@ function saveState() {
     const noteId = ta.closest('[data-note-id]')?.dataset.noteId;
     const nb = state.activeNotebook;
     const note = state.notes[nb]?.find(n=>n.id===noteId);
-    if (note) note.text = ta.value;
+    if (note) note.text = ta.innerHTML;
   });
   localStorage.setItem('notes_app_v2', JSON.stringify(state));
 }
@@ -665,7 +699,7 @@ four.forEach((note, idx) => {
         <button class="note-menu-btn" title="Options">···</button>
       </div>
       <div class="note-body">
-        <textarea class="note-textarea" placeholder="${PLACEHOLDERS[idx % PLACEHOLDERS.length]}" spellcheck="false">${escHtml(note.text)}</textarea>
+        <div class="note-textarea" contenteditable="true" spellcheck="false" data-placeholder="${PLACEHOLDERS[idx % PLACEHOLDERS.length]}"></div>
       </div>
     `;
 
@@ -673,9 +707,10 @@ four.forEach((note, idx) => {
     const titleInput = card.querySelector('.note-title');
     titleInput.addEventListener('input', () => { note.title = titleInput.value; debounceSave(); });
 
-    // textarea save
+    // set content (innerHTML, not value — contenteditable div)
     const ta = card.querySelector('.note-textarea');
-    ta.addEventListener('input', () => { note.text = ta.value; debounceSave(); });
+    ta.innerHTML = note.text;
+    ta.addEventListener('input', () => { note.text = ta.innerHTML; debounceSave(); });
 
     // delete button
     card.querySelector('.note-delete-btn').addEventListener('click', e => {
@@ -764,7 +799,7 @@ function showNoteCtx(e, note, nbId) {
     hideCtx();
     note.text = ''; note.tags = [];
     const ta = document.querySelector(`[data-note-id="${note.id}"] .note-textarea`);
-    if (ta) ta.value = '';
+    if (ta) ta.innerHTML = '';
     saveState(); renderNotes();
   };
 }
@@ -846,6 +881,51 @@ function escHtml(s='') {
 
 // strip any leftover Upgrade notebook from previous versions
 state.notebooks = state.notebooks.filter(nb => nb.name !== '⚡ Upgrade');
+
+// — FORMAT TOOLBAR ————————————————————————
+(function() {
+  const toolbar = document.getElementById('formatToolbar');
+
+  function getSelectionInNote() {
+    const sel = window.getSelection();
+    if (!sel || sel.isCollapsed || !sel.toString().trim()) return null;
+    const node = sel.anchorNode;
+    const el = node?.nodeType === Node.TEXT_NODE ? node.parentElement : node;
+    if (!el?.closest('.note-textarea')) return null;
+    return sel;
+  }
+
+  function positionToolbar() {
+    const sel = getSelectionInNote();
+    if (!sel) { toolbar.style.display = 'none'; return; }
+    const rect = sel.getRangeAt(0).getBoundingClientRect();
+    toolbar.style.display = 'flex';
+    toolbar.style.left = (rect.left + rect.width / 2) + 'px';
+    toolbar.style.top = (rect.top + window.scrollY - 44) + 'px';
+  }
+
+  document.addEventListener('mouseup', positionToolbar);
+  document.addEventListener('keyup', e => { if (e.shiftKey || e.key === 'Shift') positionToolbar(); });
+  document.addEventListener('selectionchange', () => {
+    const sel = window.getSelection();
+    if (!sel || sel.isCollapsed) toolbar.style.display = 'none';
+  });
+
+  function fmtBtn(id, cmd) {
+    document.getElementById(id).addEventListener('mousedown', e => {
+      e.preventDefault();
+      document.execCommand(cmd);
+      positionToolbar();
+    });
+  }
+  fmtBtn('fmtBold', 'bold');
+  fmtBtn('fmtUnderline', 'underline');
+  document.getElementById('fmtBullet').addEventListener('mousedown', e => {
+    e.preventDefault();
+    document.execCommand('insertUnorderedList');
+    toolbar.style.display = 'none';
+  });
+})();
 
 // — MAIN RENDER ——————————————————————————
 function render() {
