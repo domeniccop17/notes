@@ -578,7 +578,7 @@ let state = loadState() || {
 };
 
 function makeNote(text='', tags=[]) {
-  return { id: uid(), text, tags };
+  return { id: uid(), title: '', text, tags };
 }
 
 function uid() { return Math.random().toString(36).slice(2,9); }
@@ -655,52 +655,38 @@ four.forEach((note, idx) => {
     card.dataset.noteId = note.id;
     card.dataset.idx = idx;
 
-    const tagsHtml = (note.tags||[]).map(t =>
-      `<span class="tag">${escHtml(t)}<span class="remove-tag" data-tag="${escHtml(t)}">×</span></span>`
-    ).join('');
-
     card.innerHTML = `
       <div class="note-header">
         <div class="note-title-wrap">
           <div class="note-color-dot" style="background:${nb.color}" data-color-trigger></div>
-          <input class="note-title" value="Note ${idx+1}" spellcheck="false" />
+          <input class="note-title" value="${escHtml(note.title || 'Note ' + (idx+1))}" spellcheck="false" />
         </div>
+        <button class="note-delete-btn note-menu-btn" title="Delete note">×</button>
         <button class="note-menu-btn" title="Options">···</button>
       </div>
       <div class="note-body">
         <textarea class="note-textarea" placeholder="${PLACEHOLDERS[idx % PLACEHOLDERS.length]}" spellcheck="false">${escHtml(note.text)}</textarea>
       </div>
-      <div class="note-footer">
-        ${tagsHtml}
-        <input class="tag-input" placeholder="+ tag" title="Press Enter to add tag" />
-      </div>
     `;
+
+    // title save
+    const titleInput = card.querySelector('.note-title');
+    titleInput.addEventListener('input', () => { note.title = titleInput.value; debounceSave(); });
 
     // textarea save
     const ta = card.querySelector('.note-textarea');
     ta.addEventListener('input', () => { note.text = ta.value; debounceSave(); });
 
-    // tag add
-    const tagInput = card.querySelector('.tag-input');
-    tagInput.addEventListener('keydown', e => {
-      if (e.key === 'Enter') {
-        const val = tagInput.value.trim();
-        if (val && !(note.tags||[]).includes(val)) {
-          note.tags = [...(note.tags||[]), val];
-          tagInput.value = '';
-          saveState(); renderNotes();
-        }
+    // delete button
+    card.querySelector('.note-delete-btn').addEventListener('click', e => {
+      e.stopPropagation();
+      const arr = state.notes[nb.id];
+      if (arr.length > 1) {
+        state.notes[nb.id] = arr.filter(n => n.id !== note.id);
+      } else {
+        state.notes[nb.id] = [makeNote()];
       }
-    });
-
-    // tag remove
-    card.querySelectorAll('.remove-tag').forEach(btn => {
-      btn.addEventListener('click', e => {
-        e.stopPropagation();
-        const tag = btn.dataset.tag;
-        note.tags = (note.tags||[]).filter(t=>t!==tag);
-        saveState(); renderNotes();
-      });
+      saveState(); renderNotes();
     });
 
     // color dot
