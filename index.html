@@ -253,12 +253,25 @@
   .note-card.drag-over { box-shadow: inset 0 0 0 2px var(--accent); }
   .note-mic-btn {
     background: none; border: none; cursor: pointer;
-    color: var(--muted); font-size: 13px; padding: 0 2px;
-    opacity: 0; transition: opacity 0.15s, color 0.15s; flex-shrink: 0;
+    color: var(--muted); font-size: 14px; padding: 3px 6px;
+    opacity: 0; transition: opacity 0.15s, color 0.15s, background 0.15s;
+    flex-shrink: 0; border-radius: 4px; margin-right: 6px;
   }
-  .note-card:hover .note-mic-btn { opacity: 1; }
-  .note-mic-btn.recording { opacity: 1; color: #FF1744; animation: micpulse 1s infinite; }
-  @keyframes micpulse { 0%,100%{opacity:1} 50%{opacity:0.35} }
+  .note-card:hover .note-mic-btn { opacity: 0.6; }
+  .note-card:hover .note-mic-btn:hover { opacity: 1; background: var(--surface); }
+  .note-mic-btn.recording,
+  .note-card .note-mic-btn.recording,
+  .note-card:hover .note-mic-btn.recording {
+    opacity: 1 !important;
+    color: #fff;
+    background: #FF1744;
+    box-shadow: 0 0 10px rgba(255,23,68,0.6);
+    animation: micpulse 0.9s infinite;
+  }
+  @keyframes micpulse {
+    0%,100% { box-shadow: 0 0 10px rgba(255,23,68,0.6); transform: scale(1); }
+    50% { box-shadow: 0 0 18px rgba(255,23,68,0.9); transform: scale(1.1); }
+  }
 
   .note-header {
     display: flex;
