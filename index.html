@@ -202,7 +202,9 @@
     min-width: 9px;
     flex-shrink: 0;
     border-radius: 50%;
+    display: block;
   }
+  .notes-title span { padding-left: 2px; }
 
   .notes-grid {
     flex: 1;
@@ -708,7 +710,6 @@ four.forEach((note, idx) => {
     card.innerHTML = `
       <div class="note-header">
         <div class="note-title-wrap">
-          <div class="note-color-dot" style="background:${nb.color}" data-color-trigger></div>
           <input class="note-title" value="${escHtml(note.title || 'Note ' + (idx+1))}" spellcheck="false" />
         </div>
         <button class="note-delete-btn note-menu-btn" title="Delete note">×</button>
@@ -738,12 +739,6 @@ four.forEach((note, idx) => {
         state.notes[nb.id] = [makeNote()];
       }
       saveState(); renderNotes();
-    });
-
-    // color dot
-    card.querySelector('[data-color-trigger]').addEventListener('click', e => {
-      e.stopPropagation();
-      showColorPicker(e.target, nb);
     });
 
     // menu
