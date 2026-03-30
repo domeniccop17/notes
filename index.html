@@ -790,6 +790,8 @@ function showNoteCtx(e, note, nbId) {
   document.getElementById('ctx-clear').onclick = () => {
     hideCtx();
     note.text = ''; note.tags = [];
+    const ta = document.querySelector(`[data-note-id="${note.id}"] .note-textarea`);
+    if (ta) ta.value = '';
     saveState(); renderNotes();
   };
 }
