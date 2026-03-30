@@ -1321,16 +1321,30 @@ fetch('https://api.github.com/repos/domeniccop17/notes/commits?per_page=1')
         .then(r => r.ok ? r.json() : Promise.reject())
         .then(data => {
           // ── EDIT existing note ──
-          if (data.action === 'edit') {
+          if (data.action === 'edit' || (data.noteIndex !== undefined && data.content)) {
             const idx = data.noteIndex ?? 0;
             const notes = state.notes[state.activeNotebook] || [];
-            if (notes[idx]) {
-              notes[idx].text = data.content || notes[idx].text;
-              if (data.title) notes[idx].title = data.title;
+            const target = notes[idx] || notes.find(n => n.text.trim());
+            if (target) {
+              target.text = data.content;
+              if (data.title) target.title = data.title;
             }
             saveState();
             render();
             return;
+          }
+
+          // ── If AI returned content but no action, and current notebook has notes → treat as edit on first non-empty note ──
+          if (!data.action && data.content && !data.notebook) {
+            const notes = state.notes[state.activeNotebook] || [];
+            const target = notes.find(n => n.text.trim());
+            if (target) {
+              target.text = data.content;
+              if (data.title) target.title = data.title;
+              saveState();
+              render();
+              return;
+            }
           }
 
           // ── CREATE new note ──
