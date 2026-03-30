@@ -606,7 +606,11 @@ function saveState() {
 }
 
 function loadState() {
-  try { return JSON.parse(localStorage.getItem('notes_app_v2')); } catch { return null; }
+  try {
+    const s = JSON.parse(localStorage.getItem('notes_app_v2'));
+    if (!s || !Array.isArray(s.notebooks) || s.notebooks.length === 0 || !s.notes) return null;
+    return s;
+  } catch { return null; }
 }
 
 // — RENDER SIDEBAR ————————————————————————
