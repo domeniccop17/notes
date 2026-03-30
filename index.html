@@ -251,6 +251,14 @@
   :root.dark .note-card:hover { background: #1e1d1a; }
   .note-card.dragging { opacity: 0.35; }
   .note-card.drag-over { box-shadow: inset 0 0 0 2px var(--accent); }
+  .note-mic-btn {
+    background: none; border: none; cursor: pointer;
+    color: var(--muted); font-size: 13px; padding: 0 2px;
+    opacity: 0; transition: opacity 0.15s, color 0.15s; flex-shrink: 0;
+  }
+  .note-card:hover .note-mic-btn { opacity: 1; }
+  .note-mic-btn.recording { opacity: 1; color: #FF1744; animation: micpulse 1s infinite; }
+  @keyframes micpulse { 0%,100%{opacity:1} 50%{opacity:0.35} }
 
   .note-header {
     display: flex;
@@ -787,6 +795,7 @@ function renderPanel(nbId, gridEl, titleEl, countEl) {
           <div class="note-color-dot" style="background:${nb.color}"></div>
           <input class="note-title" value="${escHtml(note.title || 'Note ' + (idx+1))}" spellcheck="false" />
         </div>
+        <button class="note-mic-btn" title="Voice to text">🎤</button>
         <button class="note-delete-btn note-menu-btn" title="Delete note">×</button>
         <button class="note-menu-btn" title="Options">···</button>
       </div>
@@ -801,6 +810,38 @@ function renderPanel(nbId, gridEl, titleEl, countEl) {
     const ta = card.querySelector('.note-textarea');
     ta.innerHTML = note.text;
     ta.addEventListener('input', () => { note.text = ta.innerHTML; debounceSave(); });
+
+    // mic / speech-to-text
+    const micBtn = card.querySelector('.note-mic-btn');
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SR) { micBtn.style.display = 'none'; } else {
+      micBtn.addEventListener('click', e => {
+        e.stopPropagation();
+        if (window._activeRec) {
+          window._activeRec.stop();
+          if (window._activeMicBtn) window._activeMicBtn.classList.remove('recording');
+          if (window._activeMicBtn === micBtn) { window._activeRec = null; window._activeMicBtn = null; return; }
+        }
+        const rec = new SR();
+        rec.continuous = true;
+        rec.interimResults = false;
+        rec.lang = navigator.language || 'fr-FR';
+        rec.onresult = ev => {
+          const text = Array.from(ev.results).map(r => r[0].transcript).join(' ');
+          ta.focus();
+          document.execCommand('insertText', false, text + ' ');
+          note.text = ta.innerHTML;
+          debounceSave();
+        };
+        rec.onend = rec.onerror = () => {
+          micBtn.classList.remove('recording');
+          window._activeRec = null; window._activeMicBtn = null;
+        };
+        micBtn.classList.add('recording');
+        window._activeRec = rec; window._activeMicBtn = micBtn;
+        rec.start();
+      });
+    }
 
     card.querySelector('.note-delete-btn').addEventListener('click', e => {
       e.stopPropagation();
