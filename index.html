@@ -861,7 +861,7 @@ function renderPanel(nbId, gridEl, titleEl, countEl) {
             note.text = ta.innerHTML;
             debounceSave();
           };
-          fetch('http://localhost:3000/polish', {
+          fetch('https://notes-polish.dcop14c.workers.dev', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ text }),
