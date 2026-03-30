@@ -872,6 +872,16 @@ function renderPanel(nbId, gridEl, titleEl, countEl) {
       showNoteCtx(e, note, nb.id);
     });
 
+    // disable drag when interacting with text/input areas so selection works freely
+    card.querySelector('.note-body').addEventListener('mousedown', () => {
+      card.draggable = false;
+      document.addEventListener('mouseup', () => { card.draggable = true; }, { once: true });
+    });
+    card.querySelector('.note-title').addEventListener('mousedown', () => {
+      card.draggable = false;
+      document.addEventListener('mouseup', () => { card.draggable = true; }, { once: true });
+    });
+
     card.addEventListener('dragstart', e => {
       dragSrcId = note.id;
       setTimeout(() => card.classList.add('dragging'), 0);
