@@ -19,6 +19,17 @@
     --danger: #c0392b;
   }
 
+  :root.dark {
+    --bg: #1a1916;
+    --surface: #222120;
+    --border: #3a3835;
+    --text: #f5f3ee;
+    --muted: #888580;
+    --accent: #f5f3ee;
+    --tag-bg: #2e2c29;
+    --danger: #e05c4a;
+  }
+
   body {
     font-family: 'DM Sans', sans-serif;
     background: var(--bg);
@@ -72,6 +83,12 @@
   .btn:hover { border-color: var(--text); color: var(--text); }
   .btn.primary { background: var(--text); color: var(--bg); border-color: var(--text); }
   .btn.primary:hover { opacity: 0.8; }
+
+  .btn.icon-btn {
+    padding: 5px 9px;
+    font-size: 13px;
+    line-height: 1;
+  }
 
   /* MAIN LAYOUT */
   .workspace {
@@ -206,7 +223,8 @@
     transition: background 0.15s;
   }
 
-  .note-card:hover { background: #f8f6f1; }
+  :root:not(.dark) .note-card:hover { background: #f8f6f1; }
+  :root.dark .note-card:hover { background: #1e1d1a; }
 
   .note-header {
     display: flex;
@@ -447,13 +465,13 @@
   /* tag pill visual distinction */
   .tag {
     display: inline-flex; align-items: center; gap: 3px;
-    background: var(--accent); color: #fff;
+    background: var(--accent); color: var(--bg);
     font-size: 10px; font-weight: 700; letter-spacing: 0.07em;
     text-transform: uppercase; padding: 2px 8px 2px 8px;
     border-radius: 99px; line-height: 1.6;
   }
-  .remove-tag { color: rgba(255,255,255,0.75); font-size: 13px; line-height: 1; cursor: pointer; }
-  .remove-tag:hover { color: #fff; }
+  .remove-tag { color: rgba(128,128,128,0.75); font-size: 13px; line-height: 1; cursor: pointer; }
+  .remove-tag:hover { color: var(--danger); }
 </style>
 </head>
 <body>
@@ -461,6 +479,7 @@
 <header>
   <span class="logo">notes</span>
   <div class="header-actions">
+    <button class="btn icon-btn" id="darkModeBtn" title="Toggle dark mode">☀️</button>
     <button class="btn" id="addNotebookBtn">+ notebook</button>
     <button class="btn primary" id="addNoteBtn">+ note</button>
   </div>
@@ -519,6 +538,27 @@ const PLACEHOLDERS = [
   'Start typing', 'Add a note', 'What\'s on your mind?',
   'Write something', 'Jot it down'
 ];
+
+// — DARK MODE ————————————————————————————
+let darkMode = localStorage.getItem('notes_dark_mode') === 'true';
+
+function applyDarkMode() {
+  if (darkMode) {
+    document.documentElement.classList.add('dark');
+    document.getElementById('darkModeBtn').textContent = '🌙';
+  } else {
+    document.documentElement.classList.remove('dark');
+    document.getElementById('darkModeBtn').textContent = '☀️';
+  }
+  localStorage.setItem('notes_dark_mode', darkMode);
+}
+
+document.getElementById('darkModeBtn').addEventListener('click', () => {
+  darkMode = !darkMode;
+  applyDarkMode();
+});
+
+applyDarkMode();
 
 // — STATE ———————————————————————————————
 let state = loadState() || {
@@ -601,7 +641,6 @@ function renderNotes() {
   document.getElementById('noteCountLabel').textContent = notes.filter(n=>n.text.trim()).length + ' entries';
 
   const grid = document.getElementById('notesGrid');
-  // notes grow dynamically — no padding
   const four = state.notes[nb.id];
 
   grid.innerHTML = '';
