@@ -1288,7 +1288,10 @@ fetch('https://api.github.com/repos/domeniccop17/notes/commits?per_page=1')
 
     rec.onresult = ev => {
       for (let i = ev.resultIndex; i < ev.results.length; i++) {
-        if (ev.results[i].isFinal) transcript += ev.results[i][0].transcript + ' ';
+        if (ev.results[i].isFinal) {
+          transcript += ev.results[i][0].transcript + ' ';
+          console.log('[smart] partial:', ev.results[i][0].transcript);
+        }
       }
     };
 
@@ -1296,6 +1299,7 @@ fetch('https://api.github.com/repos/domeniccop17/notes/commits?per_page=1')
       btn.classList.remove('recording');
       window._smartRec = null;
       const text = transcript.trim();
+      console.log('[smart] onend, transcript:', JSON.stringify(text));
       if (!text) return;
 
       btn.classList.add('processing');
@@ -1306,25 +1310,33 @@ fetch('https://api.github.com/repos/domeniccop17/notes/commits?per_page=1')
         content: n.text || ''
       }));
 
+      const payload = {
+        text,
+        mode: 'smart',
+        notebooks: nbNames,
+        activeNotebook: activeNb ? activeNb.name : '',
+        activeNotes
+      };
+      console.log('[smart] sending:', JSON.stringify(payload).slice(0, 500));
+
       fetch('https://notes-polish.dcop14c.workers.dev', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          text,
-          mode: 'smart',
-          notebooks: nbNames,
-          activeNotebook: activeNb ? activeNb.name : '',
-          activeNotes
-        }),
+        body: JSON.stringify(payload),
         signal: AbortSignal.timeout(20000),
       })
-        .then(r => r.ok ? r.json() : Promise.reject())
+        .then(r => {
+          console.log('[smart] response status:', r.status);
+          return r.ok ? r.json() : r.text().then(t => { console.log('[smart] error body:', t); return Promise.reject(); });
+        })
         .then(data => {
+          console.log('[smart] data:', JSON.stringify(data));
           // ── EDIT existing note ──
           if (data.action === 'edit' || (data.noteIndex !== undefined && data.content)) {
             const idx = data.noteIndex ?? 0;
             const notes = state.notes[state.activeNotebook] || [];
             const target = notes[idx] || notes.find(n => n.text.trim());
+            console.log('[smart] editing note idx:', idx, 'found target:', !!target);
             if (target) {
               target.text = data.content;
               if (data.title) target.title = data.title;
@@ -1384,7 +1396,8 @@ fetch('https://api.github.com/repos/domeniccop17/notes/commits?per_page=1')
           saveState();
           render();
         })
-        .catch(() => {
+        .catch(err => {
+          console.error('[smart] fetch failed:', err);
           const note = makeNote(`<p>${text}</p>`, []);
           note.title = 'Voice Note';
           state.notes[state.activeNotebook].unshift(note);
@@ -1394,7 +1407,8 @@ fetch('https://api.github.com/repos/domeniccop17/notes/commits?per_page=1')
         .finally(() => btn.classList.remove('processing'));
     };
 
-    rec.onerror = () => {
+    rec.onerror = ev => {
+      console.error('[smart] rec error:', ev.error);
       btn.classList.remove('recording');
       window._smartRec = null;
     };
