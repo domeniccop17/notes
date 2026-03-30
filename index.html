@@ -202,9 +202,8 @@
     min-width: 9px;
     flex-shrink: 0;
     border-radius: 50%;
-    display: block;
+    margin-right: 8px;
   }
-  .notes-title span { padding-left: 2px; }
 
   .notes-grid {
     flex: 1;
@@ -556,7 +555,7 @@
 <div class="ctx-menu hidden" id="ctxMenu"></div>
 
 <!-- LAST UPDATED -->
-<div id="lastUpdated">updated 2026-03-29 22:02:00</div>
+<div id="lastUpdated">updated 2026-03-29 22:13:41</div>
 
 <!-- FORMAT TOOLBAR -->
 <div class="format-toolbar" id="formatToolbar">
@@ -710,6 +709,7 @@ four.forEach((note, idx) => {
     card.innerHTML = `
       <div class="note-header">
         <div class="note-title-wrap">
+          <div class="note-color-dot" style="background:${nb.color}"></div>
           <input class="note-title" value="${escHtml(note.title || 'Note ' + (idx+1))}" spellcheck="false" />
         </div>
         <button class="note-delete-btn note-menu-btn" title="Delete note">×</button>
@@ -870,7 +870,7 @@ document.getElementById('addNoteBtn').onclick = () => {
 
 // — CLOSE POPUPS —————————————————————————
 document.addEventListener('click', e => {
-  if (!e.target.closest('[data-color-trigger]') && !e.target.closest('#colorPicker'))
+  if (!e.target.closest('[data-color-trigger]') && !e.target.closest('#colorPicker') && !e.target.closest('.notebook-dot'))
     document.getElementById('colorPicker').classList.add('hidden');
   if (!e.target.closest('.note-menu-btn') && !e.target.closest('#ctxMenu') &&
       !e.target.closest('.notebook-item') )
