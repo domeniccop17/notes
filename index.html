@@ -562,7 +562,7 @@
 <div class="ctx-menu hidden" id="ctxMenu"></div>
 
 <!-- LAST UPDATED -->
-<div id="lastUpdated">updated 2026-03-29 22:13:41</div>
+<div id="lastUpdated">updated —</div>
 
 <!-- FORMAT TOOLBAR -->
 <div class="format-toolbar" id="formatToolbar">
@@ -947,6 +947,21 @@ state.notebooks = state.notebooks.filter(nb => nb.name !== '⚡ Upgrade');
     toolbar.style.display = 'none';
   });
 })();
+
+// — LAST UPDATED ——————————————————————————
+fetch('https://api.github.com/repos/domeniccop17/notes/commits?per_page=1')
+  .then(r => r.json())
+  .then(data => {
+    const d = new Date(data[0].commit.committer.date);
+    const fmt = d.getFullYear() + '-' +
+      String(d.getMonth()+1).padStart(2,'0') + '-' +
+      String(d.getDate()).padStart(2,'0') + ' ' +
+      String(d.getHours()).padStart(2,'0') + ':' +
+      String(d.getMinutes()).padStart(2,'0') + ':' +
+      String(d.getSeconds()).padStart(2,'0');
+    document.getElementById('lastUpdated').textContent = 'updated ' + fmt;
+  })
+  .catch(() => {});
 
 // — MAIN RENDER ——————————————————————————
 function render() {
