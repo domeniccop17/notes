@@ -285,6 +285,45 @@
     50%      { box-shadow: 0 0 18px rgba(21,101,192,0.85); }
   }
 
+  /* SMART RECORD BUTTON */
+  .smart-record-btn {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    padding: 5px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .smart-record-btn:hover { border-color: var(--text); color: var(--text); }
+  .smart-record-btn.recording {
+    background: #FF1744; color: #fff; border-color: #FF1744;
+    box-shadow: 0 0 12px rgba(255,23,68,0.5);
+    animation: smartpulse 0.9s infinite;
+  }
+  .smart-record-btn.processing {
+    background: #7C4DFF; color: #fff; border-color: #7C4DFF;
+    box-shadow: 0 0 12px rgba(124,77,255,0.5);
+    animation: smartbreathe 1.4s ease-in-out infinite;
+    cursor: default;
+  }
+  @keyframes smartpulse {
+    0%,100% { box-shadow: 0 0 10px rgba(255,23,68,0.5); }
+    50% { box-shadow: 0 0 22px rgba(255,23,68,0.85); }
+  }
+  @keyframes smartbreathe {
+    0%,100% { box-shadow: 0 0 8px rgba(124,77,255,0.4); }
+    50% { box-shadow: 0 0 20px rgba(124,77,255,0.8); }
+  }
+
   .note-header {
     display: flex;
     align-items: center;
@@ -578,6 +617,7 @@
 <header>
   <span class="logo">notes</span>
   <div class="header-actions">
+    <button class="smart-record-btn" id="smartRecordBtn" title="Smart record — AI sorts into the right notebook">🧠 Record</button>
     <button class="btn icon-btn" id="darkModeBtn" title="Toggle dark mode">☀️</button>
     <button class="btn" id="addNotebookBtn">+ notebook</button>
     <button class="btn primary" id="addNoteBtn">+ note</button>
@@ -852,6 +892,13 @@ function renderPanel(nbId, gridEl, titleEl, countEl) {
           window._activeRec.stop();
           if (window._activeMicBtn) window._activeMicBtn.classList.remove('recording');
           window._activeRec = null; window._activeMicBtn = null;
+        }
+        // Cancel smart record if active
+        if (window._smartRec) {
+          window._smartRec.onend = () => {};
+          window._smartRec.stop();
+          window._smartRec = null;
+          document.getElementById('smartRecordBtn').classList.remove('recording');
         }
 
         const rec = new SR();
@@ -1177,6 +1224,122 @@ fetch('https://api.github.com/repos/domeniccop17/notes/commits?per_page=1')
     document.getElementById('lastUpdated').textContent = 'updated ' + fmt;
   })
   .catch(() => {});
+
+// — SMART RECORD —————————————————————————
+(function() {
+  const btn = document.getElementById('smartRecordBtn');
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) { btn.style.display = 'none'; return; }
+
+  btn.addEventListener('click', () => {
+    if (btn.classList.contains('processing')) return;
+
+    // Stop smart recording
+    if (window._smartRec) {
+      window._smartRec.stop();
+      return;
+    }
+
+    // Stop any per-note mic recording
+    if (window._activeRec) {
+      window._activeRec.stop();
+      if (window._activeMicBtn) window._activeMicBtn.classList.remove('recording');
+      window._activeRec = null; window._activeMicBtn = null;
+    }
+
+    const rec = new SR();
+    rec.continuous = true;
+    rec.interimResults = false;
+    rec.lang = 'en-US';
+    let transcript = '';
+
+    rec.onresult = ev => {
+      for (let i = ev.resultIndex; i < ev.results.length; i++) {
+        if (ev.results[i].isFinal) transcript += ev.results[i][0].transcript + ' ';
+      }
+    };
+
+    rec.onend = () => {
+      btn.classList.remove('recording');
+      window._smartRec = null;
+      const text = transcript.trim();
+      if (!text) return;
+
+      btn.classList.add('processing');
+      const nbNames = state.notebooks.map(n => n.name);
+
+      fetch('https://notes-polish.dcop14c.workers.dev', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text, mode: 'smart', notebooks: nbNames }),
+        signal: AbortSignal.timeout(20000),
+      })
+        .then(r => r.ok ? r.json() : Promise.reject())
+        .then(data => {
+          let nbId;
+          const nbName = data.notebook;
+
+          if (!nbName || data.isNew) {
+            // Create new notebook
+            const name = nbName || 'Voice Notes';
+            const existing = state.notebooks.find(n => n.name.toLowerCase() === name.toLowerCase());
+            if (existing) {
+              nbId = existing.id;
+            } else {
+              nbId = uid();
+              const usedC = state.notebooks.map(n => n.color);
+              const color = COLORS.find(c => !usedC.includes(c)) || COLORS[state.notebooks.length % COLORS.length];
+              state.notebooks.push({ id: nbId, name, color });
+              state.notes[nbId] = [];
+            }
+          } else {
+            // Find existing notebook (case-insensitive)
+            const existing = state.notebooks.find(n => n.name.toLowerCase() === nbName.toLowerCase());
+            if (existing) {
+              nbId = existing.id;
+            } else {
+              // AI said existing but name doesn't match — create it
+              nbId = uid();
+              const usedC = state.notebooks.map(n => n.color);
+              const color = COLORS.find(c => !usedC.includes(c)) || COLORS[state.notebooks.length % COLORS.length];
+              state.notebooks.push({ id: nbId, name: nbName, color });
+              state.notes[nbId] = [];
+            }
+          }
+
+          // Add note
+          const note = makeNote(data.content || `<p>${text}</p>`, []);
+          note.title = data.title || '';
+          if (!state.notes[nbId]) state.notes[nbId] = [];
+          state.notes[nbId].unshift(note);
+
+          // Switch to that notebook
+          state.activeNotebook = nbId;
+          saveState();
+          render();
+        })
+        .catch(() => {
+          // Fallback: insert raw transcript as a note in current notebook
+          const note = makeNote(`<p>${text}</p>`, []);
+          note.title = 'Voice Note';
+          state.notes[state.activeNotebook].unshift(note);
+          saveState();
+          render();
+        })
+        .finally(() => btn.classList.remove('processing'));
+    };
+
+    rec.onerror = () => {
+      btn.classList.remove('recording');
+      window._smartRec = null;
+    };
+
+    transcript = '';
+    btn.classList.add('recording');
+    window._smartRec = rec;
+    rec.start();
+  });
+})();
 
 // — MAIN RENDER ——————————————————————————
 function render() {
