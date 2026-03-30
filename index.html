@@ -197,12 +197,20 @@
     gap: 10px;
   }
 
-  .notes-title .dot {
-    width: 9px; height: 9px;
-    min-width: 9px;
-    flex-shrink: 0;
+  #activeNotebookTitle {
+    position: relative;
+    padding-left: 18px;
+  }
+  #activeNotebookTitle::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 9px;
+    height: 9px;
     border-radius: 50%;
-    margin-right: 8px;
+    background: var(--nb-dot-color, #888);
   }
 
   .notes-grid {
@@ -539,7 +547,6 @@
   <div class="notes-area">
     <div class="notes-topbar">
       <div class="notes-title">
-        <div class="dot" id="activeNotebookDot"></div>
         <span id="activeNotebookTitle"></span>
       </div>
       <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted)" id="noteCountLabel"></div>
@@ -689,8 +696,9 @@ function renderNotes() {
   const nb = state.notebooks.find(n=>n.id===state.activeNotebook);
   if (!nb) return;
 
-  document.getElementById('activeNotebookTitle').textContent = nb.name;
-  document.getElementById('activeNotebookDot').style.background = nb.color;
+  const titleEl = document.getElementById('activeNotebookTitle');
+  titleEl.textContent = nb.name;
+  titleEl.style.setProperty('--nb-dot-color', nb.color);
 
   const notes = state.notes[nb.id] || [];
   document.getElementById('noteCountLabel').textContent = notes.filter(n=>n.text.trim()).length + ' entries';
