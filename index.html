@@ -139,6 +139,20 @@
   .notebook-item.active { background: var(--tag-bg); }
   .notebook-item.dragging { opacity: 0.35; }
   .notebook-item.drag-over { box-shadow: inset 0 2px 0 var(--accent); }
+  .nb-split-btn {
+    background: none; border: none; cursor: pointer;
+    color: var(--muted); font-size: 13px; padding: 0 2px;
+    opacity: 0; transition: opacity 0.15s; flex-shrink: 0; line-height: 1;
+  }
+  .notebook-item:hover .nb-split-btn { opacity: 1; }
+  .nb-split-btn.split-active { opacity: 1; color: var(--accent); }
+  .panel-close-btn {
+    background: none; border: none; cursor: pointer;
+    color: var(--muted); font-size: 16px; padding: 0 4px; line-height: 1;
+  }
+  .panel-close-btn:hover { color: var(--text); }
+  .notes-area + .notes-area { border-left: 1px solid var(--border); }
+  .color-swatch.color-used { opacity: 0.2; pointer-events: none; }
 
   .notebook-dot {
     flex-shrink: 0;
@@ -548,7 +562,7 @@
   </aside>
 
   <!-- NOTES AREA -->
-  <div class="notes-area">
+  <div class="notes-area" id="primaryNotesArea">
     <div class="notes-topbar">
       <div class="notes-title">
         <span id="activeNotebookTitle"></span>
@@ -556,6 +570,19 @@
       <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted)" id="noteCountLabel"></div>
     </div>
     <div class="notes-grid" id="notesGrid"></div>
+  </div>
+  <!-- SECONDARY NOTES AREA -->
+  <div class="notes-area" id="secondaryNotesArea" style="display:none">
+    <div class="notes-topbar">
+      <div class="notes-title">
+        <span id="activeNotebookTitle2"></span>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px">
+        <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted)" id="noteCountLabel2"></div>
+        <button class="panel-close-btn" id="closePanelBtn" title="Close panel">×</button>
+      </div>
+    </div>
+    <div class="notes-grid" id="notesGrid2"></div>
   </div>
 </div>
 
@@ -590,10 +617,10 @@
 <script>
 // — PALETTE ——————————————————————————————
 const COLORS = [
-  '#b85c38','#d4a843','#5b8c5a','#4a7fa5','#7b5ea7',
-  '#c96480','#6b8f71','#8c7851','#4a6fa5','#888580',
-  '#e07b54','#f0c040','#3a9e6e','#2d6fa3','#9b59b6',
-  '#e84393','#2ecc71','#e67e22','#1abc9c','#7f8c8d'
+  '#FF1744','#2979FF','#00E676','#FF6D00','#D500F9',
+  '#00E5FF','#FFEA00','#FF4081','#76FF03','#1DE9B6',
+  '#FF3D00','#3D5AFE','#00B0FF','#F50057','#69F0AE',
+  '#FFD740','#40C4FF','#EA80FC','#B2FF59','#FF6E40'
 ];
 
 const PLACEHOLDERS = [
@@ -636,7 +663,8 @@ let state = loadState() || {
     n3: [makeNote()],
     n4: [makeNote()],
   },
-  activeNotebook: 'n1'
+  activeNotebook: 'n1',
+  secondaryNotebook: null
 };
 
 function makeNote(text='', tags=[]) {
@@ -657,12 +685,14 @@ function uid() { return Math.random().toString(36).slice(2,9); }
 })();
 
 function saveState() {
-  // Sync textareas before saving
   document.querySelectorAll('.note-textarea').forEach(ta => {
     const noteId = ta.closest('[data-note-id]')?.dataset.noteId;
-    const nb = state.activeNotebook;
-    const note = state.notes[nb]?.find(n=>n.id===noteId);
-    if (note) note.text = ta.innerHTML;
+    if (!noteId) return;
+    for (const nbId of [state.activeNotebook, state.secondaryNotebook]) {
+      if (!nbId) continue;
+      const note = state.notes[nbId]?.find(n => n.id === noteId);
+      if (note) { note.text = ta.innerHTML; break; }
+    }
   });
   localStorage.setItem('notes_app_v2', JSON.stringify(state));
 }
@@ -686,12 +716,21 @@ function renderSidebar() {
     div.draggable = true;
     div.dataset.id = nb.id;
     const count = (state.notes[nb.id] || []).filter(n=>n.text.trim()).length;
+    const isSplit = nb.id === state.secondaryNotebook;
     div.innerHTML = `
       <div class="notebook-dot" style="background:${nb.color}"></div>
       <span class="notebook-name">${escHtml(nb.name)}</span>
       <span class="notebook-count">${count}</span>
+      <button class="nb-split-btn${isSplit ? ' split-active' : ''}" title="Open beside">⊞</button>
     `;
-    div.addEventListener('click', (e) => { if (e.target.closest('.notebook-dot')) { showColorPicker(e.target.closest('.notebook-dot'), nb); return; } state.activeNotebook = nb.id; state.activeNote = 0; saveState(); render(); });
+    div.addEventListener('click', (e) => {
+      if (e.target.closest('.notebook-dot')) { showColorPicker(e.target.closest('.notebook-dot'), nb); return; }
+      if (e.target.closest('.nb-split-btn')) {
+        state.secondaryNotebook = isSplit ? null : nb.id;
+        saveState(); render(); return;
+      }
+      state.activeNotebook = nb.id; state.activeNote = 0; saveState(); render();
+    });
     div.addEventListener('contextmenu', e => { e.preventDefault(); showNotebookCtx(e, nb); });
 
     div.addEventListener('dragstart', e => {
@@ -723,25 +762,20 @@ function renderSidebar() {
 }
 
 // — RENDER NOTES GRID —————————————————————
-function renderNotes() {
-  const nb = state.notebooks.find(n=>n.id===state.activeNotebook);
+function renderPanel(nbId, gridEl, titleEl, countEl) {
+  const nb = state.notebooks.find(n => n.id === nbId);
   if (!nb) return;
 
-  const titleEl = document.getElementById('activeNotebookTitle');
   titleEl.textContent = nb.name;
   titleEl.style.setProperty('--nb-dot-color', nb.color);
 
   const notes = state.notes[nb.id] || [];
-  document.getElementById('noteCountLabel').textContent = notes.filter(n=>n.text.trim()).length + ' entries';
+  countEl.textContent = notes.filter(n => n.text.trim()).length + ' entries';
 
-  const grid = document.getElementById('notesGrid');
-  const four = state.notes[nb.id];
+  gridEl.innerHTML = '';
+  let dragSrcId = null;
 
-  grid.innerHTML = '';
-
-let dragSrcId = null;
-
-  four.forEach((note, idx) => {
+  notes.forEach((note, idx) => {
     const card = document.createElement('div');
     card.className = 'note-card';
     card.draggable = true;
@@ -762,16 +796,13 @@ let dragSrcId = null;
       </div>
     `;
 
-    // title save
     const titleInput = card.querySelector('.note-title');
     titleInput.addEventListener('input', () => { note.title = titleInput.value; debounceSave(); });
 
-    // set content (innerHTML, not value — contenteditable div)
     const ta = card.querySelector('.note-textarea');
     ta.innerHTML = note.text;
     ta.addEventListener('input', () => { note.text = ta.innerHTML; debounceSave(); });
 
-    // delete button
     card.querySelector('.note-delete-btn').addEventListener('click', e => {
       e.stopPropagation();
       const arr = state.notes[nb.id];
@@ -783,13 +814,11 @@ let dragSrcId = null;
       saveState(); renderNotes();
     });
 
-    // menu
     card.querySelector('.note-menu-btn').addEventListener('click', e => {
       e.stopPropagation();
       showNoteCtx(e, note, nb.id);
     });
 
-    // drag-to-reorder
     card.addEventListener('dragstart', e => {
       dragSrcId = note.id;
       setTimeout(() => card.classList.add('dragging'), 0);
@@ -797,7 +826,7 @@ let dragSrcId = null;
     });
     card.addEventListener('dragend', () => {
       card.classList.remove('dragging');
-      grid.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
+      gridEl.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
     });
     card.addEventListener('dragover', e => {
       e.preventDefault();
@@ -816,8 +845,26 @@ let dragSrcId = null;
       saveState(); renderNotes();
     });
 
-    grid.appendChild(card);
+    gridEl.appendChild(card);
   });
+}
+
+function renderNotes() {
+  renderPanel(state.activeNotebook,
+    document.getElementById('notesGrid'),
+    document.getElementById('activeNotebookTitle'),
+    document.getElementById('noteCountLabel'));
+
+  const secArea = document.getElementById('secondaryNotesArea');
+  if (state.secondaryNotebook) {
+    secArea.style.display = 'flex';
+    renderPanel(state.secondaryNotebook,
+      document.getElementById('notesGrid2'),
+      document.getElementById('activeNotebookTitle2'),
+      document.getElementById('noteCountLabel2'));
+  } else {
+    secArea.style.display = 'none';
+  }
 }
 
 // — COLOR PICKER ——————————————————————————
@@ -825,9 +872,10 @@ let colorPickerTarget = null;
 function showColorPicker(anchor, nb) {
   const picker = document.getElementById('colorPicker');
   picker.innerHTML = '';
+  const usedColors = state.notebooks.filter(n => n.id !== nb.id).map(n => n.color);
   COLORS.forEach(c => {
     const sw = document.createElement('div');
-    sw.className = 'color-swatch' + (nb.color===c?' selected':'');
+    sw.className = 'color-swatch' + (nb.color===c?' selected':'') + (usedColors.includes(c)?' color-used':'');
     sw.style.background = c;
     sw.addEventListener('click', e => {
       e.stopPropagation();
@@ -922,7 +970,8 @@ document.getElementById('addNotebookBtn').onclick = () => {
   showModal('New Notebook', '', val => {
     if (!val) return;
     const id = uid();
-    const color = COLORS[state.notebooks.length % COLORS.length];
+    const usedC = state.notebooks.map(n => n.color);
+    const color = COLORS.find(c => !usedC.includes(c)) || COLORS[state.notebooks.length % COLORS.length];
     state.notebooks.push({ id, name: val, color });
     state.notes[id] = [makeNote()];
     state.activeNotebook = id;
@@ -1008,6 +1057,11 @@ state.notebooks = state.notebooks.filter(nb => nb.name !== '⚡ Upgrade');
     toolbar.style.display = 'none';
   });
 })();
+
+document.getElementById('closePanelBtn').addEventListener('click', () => {
+  state.secondaryNotebook = null;
+  saveState(); render();
+});
 
 // — LAST UPDATED ——————————————————————————
 fetch('https://api.github.com/repos/domeniccop17/notes/commits?per_page=1')
