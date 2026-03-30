@@ -234,6 +234,8 @@
 
   :root:not(.dark) .note-card:hover { background: #f8f6f1; }
   :root.dark .note-card:hover { background: #1e1d1a; }
+  .note-card.dragging { opacity: 0.35; }
+  .note-card.drag-over { box-shadow: inset 0 0 0 2px var(--accent); }
 
   .note-header {
     display: flex;
@@ -708,9 +710,12 @@ function renderNotes() {
 
   grid.innerHTML = '';
 
-four.forEach((note, idx) => {
+let dragSrcId = null;
+
+  four.forEach((note, idx) => {
     const card = document.createElement('div');
     card.className = 'note-card';
+    card.draggable = true;
     card.dataset.noteId = note.id;
     card.dataset.idx = idx;
 
@@ -753,6 +758,33 @@ four.forEach((note, idx) => {
     card.querySelector('.note-menu-btn').addEventListener('click', e => {
       e.stopPropagation();
       showNoteCtx(e, note, nb.id);
+    });
+
+    // drag-to-reorder
+    card.addEventListener('dragstart', e => {
+      dragSrcId = note.id;
+      setTimeout(() => card.classList.add('dragging'), 0);
+      e.dataTransfer.effectAllowed = 'move';
+    });
+    card.addEventListener('dragend', () => {
+      card.classList.remove('dragging');
+      grid.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
+    });
+    card.addEventListener('dragover', e => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      if (dragSrcId !== note.id) card.classList.add('drag-over');
+    });
+    card.addEventListener('dragleave', () => card.classList.remove('drag-over'));
+    card.addEventListener('drop', e => {
+      e.preventDefault();
+      card.classList.remove('drag-over');
+      if (dragSrcId === note.id) return;
+      const arr = state.notes[nb.id];
+      const fromIdx = arr.findIndex(n => n.id === dragSrcId);
+      const toIdx = arr.findIndex(n => n.id === note.id);
+      arr.splice(toIdx, 0, arr.splice(fromIdx, 1)[0]);
+      saveState(); renderNotes();
     });
 
     grid.appendChild(card);
