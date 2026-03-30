@@ -798,12 +798,11 @@ function renderPanel(nbId, gridEl, titleEl, countEl) {
   notes.forEach((note, idx) => {
     const card = document.createElement('div');
     card.className = 'note-card';
-    card.draggable = true;
     card.dataset.noteId = note.id;
     card.dataset.idx = idx;
 
     card.innerHTML = `
-      <div class="note-header">
+      <div class="note-header" draggable="true">
         <div class="note-title-wrap">
           <div class="note-color-dot" style="background:${nb.color}"></div>
           <input class="note-title" value="${escHtml(note.title || 'Note ' + (idx+1))}" spellcheck="false" />
@@ -872,17 +871,7 @@ function renderPanel(nbId, gridEl, titleEl, countEl) {
       showNoteCtx(e, note, nb.id);
     });
 
-    // disable drag when interacting with text/input areas so selection works freely
-    card.querySelector('.note-body').addEventListener('mousedown', () => {
-      card.draggable = false;
-      document.addEventListener('mouseup', () => { card.draggable = true; }, { once: true });
-    });
-    card.querySelector('.note-title').addEventListener('mousedown', () => {
-      card.draggable = false;
-      document.addEventListener('mouseup', () => { card.draggable = true; }, { once: true });
-    });
-
-    card.addEventListener('dragstart', e => {
+    card.querySelector('.note-header').addEventListener('dragstart', e => {
       dragSrcId = note.id;
       setTimeout(() => card.classList.add('dragging'), 0);
       e.dataTransfer.effectAllowed = 'move';
