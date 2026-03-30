@@ -851,6 +851,72 @@ function escHtml(s='') {
   return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
+// — UPGRADE FEATURE ——————————————————————
+function initUpgradeFeature() {
+  const upgradeNotebook = state.notebooks.find(nb => nb.name === '⚡ Upgrade');
+  if (upgradeNotebook) return;
+
+  const id = uid();
+  state.notebooks.unshift({ id, name: '⚡ Upgrade', color: '#f59e0b' });
+  state.notes[id] = [{
+    id: uid(),
+    title: 'System Upgrade',
+    body: '<div id="upgradePanel" style="padding: 20px;"><h3>💡 Upgrade your Notes app</h3><p style="color: var(--muted); font-size: 13px; margin: 12px 0;">Describe what you want to change, and Claude will update it.</p><textarea id="upgradePrompt" placeholder="e.g., add dark mode, fix clear button, add delete feature..." style="width: 100%; height: 100px; padding: 12px; border: 1px solid var(--border); border-radius: 4px; background: var(--surface); color: var(--text); font-family: inherit; resize: vertical;"></textarea><button id="upgradeBtn" style="margin-top: 12px; padding: 8px 16px; background: #f59e0b; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 500;">⚡ UPGRADE</button><div id="upgradeProgress" style="margin-top: 12px; display: none;"><div style="font-size: 13px; color: var(--muted); margin-bottom: 8px;" id="progressText">Connecting...</div><div style="width: 100%; height: 4px; background: var(--surface); border-radius: 2px; overflow: hidden;"><div id="progressBar" style="height: 100%; background: #f59e0b; width: 0%; transition: width 0.3s;"></div></div></div></div>',
+    created: Date.now(),
+    modified: Date.now()
+  }];
+  saveState();
+}
+
+async function handleUpgrade() {
+  const prompt = document.getElementById('upgradePrompt')?.value.trim();
+  if (!prompt) return;
+  const progressDiv = document.getElementById('upgradeProgress');
+  const progressText = document.getElementById('progressText');
+  const progressBar = document.getElementById('progressBar');
+  const upgradeBtn = document.getElementById('upgradeBtn');
+  progressDiv.style.display = 'block';
+  upgradeBtn.disabled = true;
+  try {
+    const response = await fetch('http://localhost:3000/upgrade', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt })
+    });
+    const reader = response.body.getReader();
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      const text = new TextDecoder().decode(value);
+      const lines = text.split('\n');
+      lines.forEach(line => {
+        if (line.startsWith('data: ')) {
+          const data = JSON.parse(line.slice(6));
+          const steps = ['connecting', 'thinking', 'updating', 'deploying', 'success'];
+          const messages = ['Connecting...', 'Claude is thinking...', 'Updating HTML...', 'Deploying to GitHub...', '✅ Success!'];
+          const idx = steps.indexOf(data.status);
+          if (idx >= 0) {
+            progressText.textContent = messages[idx];
+            progressBar.style.width = ((idx + 1) / steps.length * 100) + '%';
+          }
+        }
+      });
+    }
+    upgradeBtn.disabled = false;
+    document.getElementById('upgradePrompt').value = '';
+    setTimeout(() => { progressDiv.style.display = 'none'; }, 2000);
+  } catch (err) {
+    upgradeBtn.disabled = false;
+    progressText.textContent = '❌ Error: Is server running? (node server.js)';
+  }
+}
+
+initUpgradeFeature();
+setTimeout(() => {
+  const btn = document.getElementById('upgradeBtn');
+  if (btn) btn.onclick = handleUpgrade;
+}, 100);
+
 // — MAIN RENDER ——————————————————————————
 function render() {
   renderSidebar();
