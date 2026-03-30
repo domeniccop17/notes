@@ -305,6 +305,8 @@
 
   .note-textarea::placeholder { color: var(--muted); }
   .note-textarea:empty::before { content: attr(data-placeholder); color: var(--muted); pointer-events: none; display: block; }
+  .note-textarea b, .note-textarea strong { font-weight: 900; color: #000; }
+  :root.dark .note-textarea b, :root.dark .note-textarea strong { color: #fff; }
 
   .format-toolbar {
     position: fixed;
