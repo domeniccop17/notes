@@ -258,13 +258,6 @@
     opacity: 0; transition: opacity 0.15s, color 0.15s, background 0.15s;
     flex-shrink: 0; border-radius: 4px; margin-right: 6px;
   }
-  .note-mic-btn .mic-lang {
-    position: absolute; bottom: -2px; right: 0px;
-    font-size: 8px; font-weight: 700; line-height: 1;
-    color: var(--muted); letter-spacing: 0;
-    pointer-events: none;
-  }
-  .note-mic-btn.recording .mic-lang { color: #fff; }
   .note-card:hover .note-mic-btn { opacity: 0.6; }
   .note-card:hover .note-mic-btn:hover { opacity: 1; background: var(--surface); }
   .note-mic-btn.recording,
@@ -657,7 +650,7 @@ const PLACEHOLDERS = [
 ];
 
 // — DARK MODE ————————————————————————————
-let darkMode = localStorage.getItem('notes_dark_mode') === 'true';
+let darkMode = (() => { try { return localStorage.getItem('notes_dark_mode') === 'true'; } catch { return false; } })();
 
 function applyDarkMode() {
   if (darkMode) {
@@ -667,7 +660,7 @@ function applyDarkMode() {
     document.documentElement.classList.remove('dark');
     document.getElementById('darkModeBtn').textContent = '☀️';
   }
-  localStorage.setItem('notes_dark_mode', darkMode);
+  try { localStorage.setItem('notes_dark_mode', darkMode); } catch {}
 }
 
 document.getElementById('darkModeBtn').addEventListener('click', () => {
@@ -722,7 +715,7 @@ function saveState() {
       if (note) { note.text = ta.innerHTML; break; }
     }
   });
-  localStorage.setItem('notes_app_v2', JSON.stringify(state));
+  try { localStorage.setItem('notes_app_v2', JSON.stringify(state)); } catch {}
 }
 
 function loadState() {
@@ -815,7 +808,7 @@ function renderPanel(nbId, gridEl, titleEl, countEl) {
           <div class="note-color-dot" style="background:${nb.color}"></div>
           <input class="note-title" value="${escHtml(note.title || 'Note ' + (idx+1))}" spellcheck="false" />
         </div>
-        <button class="note-mic-btn" title="Left-click to record · Right-click to switch FR/EN">🎤<span class="mic-lang">FR</span></button>
+        <button class="note-mic-btn" title="Voice to text">🎤</button>
         <button class="note-delete-btn note-menu-btn" title="Delete note">×</button>
         <button class="note-menu-btn" title="Options">···</button>
       </div>
@@ -833,15 +826,8 @@ function renderPanel(nbId, gridEl, titleEl, countEl) {
 
     // mic / speech-to-text
     const micBtn = card.querySelector('.note-mic-btn');
-    const micLangBadge = micBtn.querySelector('.mic-lang');
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SR) { micBtn.style.display = 'none'; } else {
-      let micLang = 'fr-FR';
-      micBtn.addEventListener('contextmenu', e => {
-        e.preventDefault(); e.stopPropagation();
-        micLang = micLang === 'fr-FR' ? 'en-US' : 'fr-FR';
-        micLangBadge.textContent = micLang === 'fr-FR' ? 'FR' : 'EN';
-      });
       micBtn.addEventListener('click', e => {
         e.stopPropagation();
         if (window._activeRec) {
@@ -852,7 +838,7 @@ function renderPanel(nbId, gridEl, titleEl, countEl) {
         const rec = new SR();
         rec.continuous = true;
         rec.interimResults = false;
-        rec.lang = micLang;
+        rec.lang = 'en-US';
         rec.onresult = ev => {
           const text = Array.from(ev.results).map(r => r[0].transcript).join(' ');
           ta.focus();
