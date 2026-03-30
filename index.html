@@ -501,6 +501,17 @@
   }
   .remove-tag { color: rgba(128,128,128,0.75); font-size: 13px; line-height: 1; cursor: pointer; }
   .remove-tag:hover { color: var(--danger); }
+  #lastUpdated {
+    position: fixed;
+    bottom: 10px;
+    left: 16px;
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 0.04em;
+    pointer-events: none;
+    z-index: 10;
+  }
 </style>
 </head>
 <body>
@@ -541,6 +552,9 @@
 
 <!-- CONTEXT MENU -->
 <div class="ctx-menu hidden" id="ctxMenu"></div>
+
+<!-- LAST UPDATED -->
+<div id="lastUpdated">updated 2026-03-29 22:02:00</div>
 
 <!-- FORMAT TOOLBAR -->
 <div class="format-toolbar" id="formatToolbar">
@@ -907,7 +921,9 @@ state.notebooks = state.notebooks.filter(nb => nb.name !== '⚡ Upgrade');
   }
 
   document.addEventListener('mouseup', positionToolbar);
-  document.addEventListener('keyup', e => { if (e.shiftKey || e.key === 'Shift') positionToolbar(); });
+  document.addEventListener('keyup', e => {
+    if (e.shiftKey || e.key === 'Shift' || (e.key === 'a' && (e.ctrlKey || e.metaKey))) positionToolbar();
+  });
   document.addEventListener('selectionchange', () => {
     const sel = window.getSelection();
     if (!sel || sel.isCollapsed) toolbar.style.display = 'none';
