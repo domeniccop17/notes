@@ -1336,13 +1336,13 @@ fetch('https://api.github.com/repos/domeniccop17/notes/commits?per_page=1')
             const idx = data.noteIndex ?? 0;
             const notes = state.notes[state.activeNotebook] || [];
             const target = notes[idx] || notes.find(n => n.text.trim());
-            console.log('[smart] editing note idx:', idx, 'found target:', !!target);
             if (target) {
               target.text = data.content;
               if (data.title) target.title = data.title;
             }
-            saveState();
+            // render first (rebuilds DOM from state), then save
             render();
+            saveState();
             return;
           }
 
@@ -1353,8 +1353,8 @@ fetch('https://api.github.com/repos/domeniccop17/notes/commits?per_page=1')
             if (target) {
               target.text = data.content;
               if (data.title) target.title = data.title;
-              saveState();
               render();
+              saveState();
               return;
             }
           }
