@@ -865,7 +865,6 @@ function renderPanel(nbId, gridEl, titleEl, countEl) {
           for (let i = ev.resultIndex; i < ev.results.length; i++) {
             if (ev.results[i].isFinal) transcript += ev.results[i][0].transcript + ' ';
           }
-          console.log('[mic] transcript so far:', transcript);
         };
 
         // polish only when recording ends (user clicks to stop)
@@ -873,8 +872,7 @@ function renderPanel(nbId, gridEl, titleEl, countEl) {
           micBtn.classList.remove('recording');
           window._activeRec = null; window._activeMicBtn = null;
           const text = transcript.trim();
-          console.log('[mic] onend fired, transcript:', text);
-          if (!text) { console.log('[mic] empty transcript, skipping polish'); return; }
+          if (!text) return;
           micBtn.classList.add('polishing');
           const insertText = str => {
             ta.focus();
@@ -882,16 +880,15 @@ function renderPanel(nbId, gridEl, titleEl, countEl) {
             note.text = ta.innerHTML;
             debounceSave();
           };
-          console.log('[mic] fetching worker with text:', text);
           fetch('https://notes-polish.dcop14c.workers.dev', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ text }),
             signal: AbortSignal.timeout(15000),
           })
-            .then(r => { console.log('[mic] worker response status:', r.status); return r.ok ? r.json() : Promise.reject(); })
-            .then(data => { console.log('[mic] polished:', data.polished); insertText(data.polished || text); })
-            .catch(err => { console.error('[mic] fetch failed:', err); insertText(text); })
+            .then(r => r.ok ? r.json() : Promise.reject())
+            .then(data => insertText(data.polished || text))
+            .catch(() => insertText(text))
             .finally(() => micBtn.classList.remove('polishing'));
         };
         rec.onerror = () => {
