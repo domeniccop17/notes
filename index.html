@@ -392,13 +392,13 @@
   .note-card:hover .note-clear-btn { opacity: 0.6; }
   .note-card:hover .note-clear-btn:hover { opacity: 1; color: var(--danger); border-color: var(--danger); }
   .note-delete-btn {
-    background: none; border: none; cursor: pointer;
-    font-size: 12px; padding: 2px 4px; border-radius: 3px;
-    opacity: 0; transition: opacity 0.15s;
-    flex-shrink: 0;
+    background: none; border: 1px solid var(--border); cursor: pointer;
+    font-size: 12px; padding: 2px 6px; border-radius: 3px;
+    opacity: 0; transition: opacity 0.15s, border-color 0.15s, background 0.15s;
+    flex-shrink: 0; color: var(--text);
   }
-  .note-card:hover .note-delete-btn { opacity: 0.5; }
-  .note-card:hover .note-delete-btn:hover { opacity: 1; }
+  .note-card:hover .note-delete-btn { opacity: 0.6; }
+  .note-card:hover .note-delete-btn:hover { opacity: 1; border-color: var(--danger); background: rgba(192,57,43,0.1); }
 
   .note-body {
     flex: 1;
