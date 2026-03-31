@@ -946,8 +946,36 @@ function renderPanel(nbId, gridEl, titleEl, countEl) {
     ta.innerHTML = note.text;
     ta.addEventListener('input', () => { note.text = ta.innerHTML; debounceSave(); });
 
-    // Enter key in checklist — always add new checkbox item if checklist exists
+    // Backspace in checklist — remove empty item in one press
     ta.addEventListener('keydown', e => {
+      if (e.key === 'Backspace') {
+        const sel = window.getSelection();
+        const anchor = sel?.anchorNode;
+        const el = anchor?.nodeType === Node.TEXT_NODE ? anchor.parentElement : anchor;
+        const item = el?.closest('.checklist-item');
+        if (!item) return;
+        const span = item.querySelector('span');
+        const text = span ? span.textContent.replace(/\u200B/g, '').trim() : '';
+        if (text === '') {
+          e.preventDefault();
+          const prev = item.previousElementSibling;
+          item.remove();
+          // move cursor to end of previous item or start of textarea
+          if (prev && prev.classList.contains('checklist-item')) {
+            const prevSpan = prev.querySelector('span');
+            if (prevSpan) {
+              const range = document.createRange();
+              range.selectNodeContents(prevSpan);
+              range.collapse(false);
+              sel.removeAllRanges();
+              sel.addRange(range);
+            }
+          }
+          note.text = ta.innerHTML;
+          debounceSave();
+        }
+        return;
+      }
       if (e.key !== 'Enter') return;
       // find if cursor is in or near a checklist item
       const sel = window.getSelection();
