@@ -1486,19 +1486,20 @@ document.getElementById('closePanelBtn').addEventListener('click', () => {
 });
 
 // — LAST UPDATED ——————————————————————————
-fetch('https://api.github.com/repos/domeniccop17/notes/commits?per_page=1')
-  .then(r => r.json())
-  .then(data => {
-    const d = new Date(data[0].commit.committer.date);
-    const fmt = d.getFullYear() + '-' +
-      String(d.getMonth()+1).padStart(2,'0') + '-' +
-      String(d.getDate()).padStart(2,'0') + ' ' +
-      String(d.getHours()).padStart(2,'0') + ':' +
-      String(d.getMinutes()).padStart(2,'0') + ':' +
-      String(d.getSeconds()).padStart(2,'0');
-    document.getElementById('lastUpdated').textContent = 'updated ' + fmt;
-  })
-  .catch(() => {});
+Promise.all([
+  fetch('https://api.github.com/repos/domeniccop17/notes/commits?per_page=1').then(r => r.json()).then(d => new Date(d[0].commit.committer.date)).catch(() => new Date(0)),
+  fetch('https://api.github.com/repos/domeniccop17/notes-polish/commits?per_page=1').then(r => r.json()).then(d => new Date(d[0].commit.committer.date)).catch(() => new Date(0)),
+]).then(([notesDate, polishDate]) => {
+  const d = notesDate > polishDate ? notesDate : polishDate;
+  if (d.getTime() === 0) return;
+  const fmt = d.getFullYear() + '-' +
+    String(d.getMonth()+1).padStart(2,'0') + '-' +
+    String(d.getDate()).padStart(2,'0') + ' ' +
+    String(d.getHours()).padStart(2,'0') + ':' +
+    String(d.getMinutes()).padStart(2,'0') + ':' +
+    String(d.getSeconds()).padStart(2,'0');
+  document.getElementById('lastUpdated').textContent = 'updated ' + fmt;
+}).catch(() => {});
 
 // — SMART RECORD —————————————————————————
 (function() {
