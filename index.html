@@ -810,15 +810,15 @@ function uid() { return Math.random().toString(36).slice(2,9); }
   if (typeof state.activeNotebook === 'undefined') state.activeNotebook = state.notebooks[0].id;
 })();
 
-// — UNDO / REDO HISTORY ——————————————————
+// — UNDO / REDO (structural actions only) ——
+// Text typing undo is handled natively by the browser (contenteditable).
+// This system only handles: AI edits, delete note, clear note, smart record.
 const undoStack = [];
 const redoStack = [];
 const MAX_UNDO = 50;
-let undoLock = false;
-let lastSnapshot = '';
 
-function getStateSnapshot() {
-  // sync DOM to state first
+function snapshotForUndo() {
+  // sync DOM → state
   document.querySelectorAll('.note-textarea').forEach(ta => {
     const noteId = ta.closest('[data-note-id]')?.dataset.noteId;
     if (!noteId) return;
@@ -828,50 +828,54 @@ function getStateSnapshot() {
       if (note) { note.text = ta.innerHTML; break; }
     }
   });
-  return JSON.stringify(state);
+  const snap = JSON.stringify(state);
+  if (undoStack.length && undoStack[undoStack.length - 1] === snap) return;
+  undoStack.push(snap);
+  if (undoStack.length > MAX_UNDO) undoStack.shift();
+  redoStack.length = 0;
 }
 
-function restoreState(snapshot) {
-  const s = JSON.parse(snapshot);
-  state.notebooks = s.notebooks;
-  state.notes = s.notes;
-  state.activeNotebook = s.activeNotebook;
-  state.secondaryNotebook = s.secondaryNotebook;
-  try { localStorage.setItem('notes_app_v2', snapshot); } catch {}
+function structuralUndo() {
+  if (!undoStack.length) return;
+  // save current for redo
+  document.querySelectorAll('.note-textarea').forEach(ta => {
+    const noteId = ta.closest('[data-note-id]')?.dataset.noteId;
+    if (!noteId) return;
+    for (const nbId of [state.activeNotebook, state.secondaryNotebook]) {
+      if (!nbId) continue;
+      const note = state.notes[nbId]?.find(n => n.id === noteId);
+      if (note) { note.text = ta.innerHTML; break; }
+    }
+  });
+  redoStack.push(JSON.stringify(state));
+  const prev = JSON.parse(undoStack.pop());
+  state.notebooks = prev.notebooks;
+  state.notes = prev.notes;
+  state.activeNotebook = prev.activeNotebook;
+  state.secondaryNotebook = prev.secondaryNotebook;
+  try { localStorage.setItem('notes_app_v2', JSON.stringify(state)); } catch {}
   render();
 }
 
-function pushToUndo(snapshot) {
-  if (undoLock) return;
-  if (snapshot === lastSnapshot) return; // skip duplicates
-  undoStack.push(snapshot);
-  if (undoStack.length > MAX_UNDO) undoStack.shift();
-  redoStack.length = 0;
-  lastSnapshot = snapshot;
-}
-
-// call before a destructive/AI action to save current state
-function snapshotForUndo() {
-  if (undoLock) return;
-  pushToUndo(getStateSnapshot());
-}
-
-function undo() {
-  if (!undoStack.length) return;
-  undoLock = true;
-  redoStack.push(getStateSnapshot());
-  restoreState(undoStack.pop());
-  lastSnapshot = getStateSnapshot();
-  undoLock = false;
-}
-
-function redo() {
+function structuralRedo() {
   if (!redoStack.length) return;
-  undoLock = true;
-  undoStack.push(getStateSnapshot());
-  restoreState(redoStack.pop());
-  lastSnapshot = getStateSnapshot();
-  undoLock = false;
+  document.querySelectorAll('.note-textarea').forEach(ta => {
+    const noteId = ta.closest('[data-note-id]')?.dataset.noteId;
+    if (!noteId) return;
+    for (const nbId of [state.activeNotebook, state.secondaryNotebook]) {
+      if (!nbId) continue;
+      const note = state.notes[nbId]?.find(n => n.id === noteId);
+      if (note) { note.text = ta.innerHTML; break; }
+    }
+  });
+  undoStack.push(JSON.stringify(state));
+  const next = JSON.parse(redoStack.pop());
+  state.notebooks = next.notebooks;
+  state.notes = next.notes;
+  state.activeNotebook = next.activeNotebook;
+  state.secondaryNotebook = next.secondaryNotebook;
+  try { localStorage.setItem('notes_app_v2', JSON.stringify(state)); } catch {}
+  render();
 }
 
 function saveState() {
@@ -884,10 +888,7 @@ function saveState() {
       if (note) { note.text = ta.innerHTML; break; }
     }
   });
-  // auto-snapshot on every save for undo
-  const snap = JSON.stringify(state);
-  pushToUndo(snap);
-  try { localStorage.setItem('notes_app_v2', snap); } catch {}
+  try { localStorage.setItem('notes_app_v2', JSON.stringify(state)); } catch {}
 }
 
 function loadState() {
@@ -1410,15 +1411,16 @@ document.getElementById('addNoteBtn').onclick = () => {
 (function() {
   let spaceHeld = false;
   document.addEventListener('keydown', e => {
-    // Ctrl+Z → undo, Ctrl+Y → redo
+    // Ctrl+Z / Ctrl+Y — let browser handle natively in text fields
+    // Only use structural undo/redo when NOT typing in a note
     if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
-      e.preventDefault();
-      undo();
+      if (e.target.closest('[contenteditable], input')) return; // native undo
+      if (undoStack.length) { e.preventDefault(); structuralUndo(); }
       return;
     }
     if ((e.ctrlKey || e.metaKey) && e.key === 'y') {
-      e.preventDefault();
-      redo();
+      if (e.target.closest('[contenteditable], input')) return; // native redo
+      if (redoStack.length) { e.preventDefault(); structuralRedo(); }
       return;
     }
     if (e.target.closest('input, [contenteditable]')) return;
