@@ -391,6 +391,14 @@
   }
   .note-card:hover .note-clear-btn { opacity: 0.6; }
   .note-card:hover .note-clear-btn:hover { opacity: 1; color: var(--danger); border-color: var(--danger); }
+  .note-delete-btn {
+    background: none; border: none; cursor: pointer;
+    font-size: 12px; padding: 2px 4px; border-radius: 3px;
+    opacity: 0; transition: opacity 0.15s;
+    flex-shrink: 0;
+  }
+  .note-card:hover .note-delete-btn { opacity: 0.5; }
+  .note-card:hover .note-delete-btn:hover { opacity: 1; }
 
   .note-body {
     flex: 1;
@@ -942,6 +950,7 @@ function renderPanel(nbId, gridEl, titleEl, countEl) {
         <button class="note-list-btn" title="AI organize as checklist">☑</button>
         <button class="note-mic-btn" title="Voice to text">🎤</button>
         <button class="note-clear-btn" title="Clear note">clear</button>
+        <button class="note-delete-btn" title="Delete note">🗑</button>
       </div>
       <div class="note-body">
         <div class="note-textarea" contenteditable="true" spellcheck="false" data-placeholder="${PLACEHOLDERS[idx % PLACEHOLDERS.length]}"></div>
@@ -1181,6 +1190,18 @@ function renderPanel(nbId, gridEl, titleEl, countEl) {
       ta.innerHTML = '';
       titleInput.value = 'Note ' + (idx + 1);
       saveState();
+    });
+
+    card.querySelector('.note-delete-btn').addEventListener('click', e => {
+      e.stopPropagation();
+      snapshotForUndo();
+      const arr = state.notes[nb.id];
+      if (arr.length > 1) {
+        state.notes[nb.id] = arr.filter(n => n.id !== note.id);
+      } else {
+        state.notes[nb.id] = [makeNote()];
+      }
+      saveState(); renderNotes();
     });
 
     card.querySelector('.note-header').addEventListener('dragstart', e => {
