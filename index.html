@@ -411,6 +411,34 @@
   .note-textarea b, .note-textarea strong { font-weight: 900; color: #000; }
   :root.dark .note-textarea b, :root.dark .note-textarea strong { color: #fff; }
 
+  /* CHECKLIST */
+  .note-textarea .checklist-item {
+    display: flex; align-items: flex-start; gap: 6px; margin: 2px 0;
+  }
+  .note-textarea .checklist-item input[type="checkbox"] {
+    margin-top: 4px; cursor: pointer; flex-shrink: 0;
+    accent-color: var(--accent);
+  }
+  .note-textarea .checklist-item.checked span {
+    text-decoration: line-through; opacity: 0.5;
+  }
+
+  /* LIST BUTTON (AI organize) */
+  .note-list-btn {
+    position: relative;
+    background: none; border: none; cursor: pointer;
+    color: var(--muted); font-size: 13px; padding: 3px 6px;
+    opacity: 0; transition: opacity 0.15s, color 0.15s, background 0.15s;
+    flex-shrink: 0; border-radius: 4px; margin-right: 2px;
+  }
+  .note-card:hover .note-list-btn { opacity: 0.6; }
+  .note-card:hover .note-list-btn:hover { opacity: 1; background: var(--surface); }
+  .note-list-btn.processing {
+    opacity: 1 !important; color: #fff; background: #7C4DFF;
+    box-shadow: 0 0 10px rgba(124,77,255,0.5);
+    animation: micbreathe 1.4s ease-in-out infinite; cursor: default;
+  }
+
   .format-toolbar {
     position: fixed;
     background: var(--surface);
@@ -679,6 +707,7 @@
   <button class="format-btn" id="fmtBold" title="Gras" style="font-weight:900; color:#111; font-size:14px;">G</button>
   <button class="format-btn" id="fmtUnderline" title="Souligné"><u style="text-underline-offset:3px;">S</u></button>
   <button class="format-btn" id="fmtBullet" title="Liste à puces" style="font-size:22px; line-height:1;">•</button>
+  <button class="format-btn" id="fmtCheck" title="Checklist" style="font-size:13px; line-height:1;">☑</button>
 </div>
 
 <!-- MODAL -->
@@ -866,6 +895,7 @@ function renderPanel(nbId, gridEl, titleEl, countEl) {
           <div class="note-color-dot" style="background:${nb.color}"></div>
           <input class="note-title" value="${escHtml(note.title || 'Note ' + (idx+1))}" spellcheck="false" />
         </div>
+        <button class="note-list-btn" title="AI organize as checklist">☑</button>
         <button class="note-mic-btn" title="Voice to text">🎤</button>
         <button class="note-delete-btn note-menu-btn" title="Delete note">×</button>
         <button class="note-menu-btn" title="Options">···</button>
@@ -881,6 +911,40 @@ function renderPanel(nbId, gridEl, titleEl, countEl) {
     const ta = card.querySelector('.note-textarea');
     ta.innerHTML = note.text;
     ta.addEventListener('input', () => { note.text = ta.innerHTML; debounceSave(); });
+
+    // checkbox toggle — click checkbox to strike through
+    ta.addEventListener('change', e => {
+      if (e.target.type === 'checkbox') {
+        const item = e.target.closest('.checklist-item');
+        if (item) { item.classList.toggle('checked', e.target.checked); note.text = ta.innerHTML; debounceSave(); }
+      }
+    });
+
+    // AI list button — organize note content as checklist
+    const listBtn = card.querySelector('.note-list-btn');
+    listBtn.addEventListener('click', e => {
+      e.stopPropagation();
+      if (listBtn.classList.contains('processing')) return;
+      const content = ta.innerHTML.trim();
+      if (!content || content === '<br>') return;
+      listBtn.classList.add('processing');
+      fetch('https://notes-polish.dcop14c.workers.dev', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: content, mode: 'checklist' }),
+        signal: AbortSignal.timeout(20000),
+      })
+        .then(r => r.ok ? r.json() : Promise.reject())
+        .then(data => {
+          if (data.content) {
+            ta.innerHTML = data.content;
+            note.text = ta.innerHTML;
+            debounceSave();
+          }
+        })
+        .catch(() => {})
+        .finally(() => listBtn.classList.remove('processing'));
+    });
 
     // mic / speech-to-text
     const micBtn = card.querySelector('.note-mic-btn');
@@ -1265,6 +1329,18 @@ state.notebooks = state.notebooks.filter(nb => nb.name !== '⚡ Upgrade');
   document.getElementById('fmtBullet').addEventListener('mousedown', e => {
     e.preventDefault();
     document.execCommand('insertUnorderedList');
+    toolbar.style.display = 'none';
+  });
+  document.getElementById('fmtCheck').addEventListener('mousedown', e => {
+    e.preventDefault();
+    const sel = window.getSelection();
+    if (!sel || sel.isCollapsed) return;
+    const text = sel.toString();
+    const lines = text.split('\n').filter(l => l.trim());
+    const html = lines.map(l =>
+      `<div class="checklist-item"><input type="checkbox"><span>${l.trim()}</span></div>`
+    ).join('');
+    document.execCommand('insertHTML', false, html);
     toolbar.style.display = 'none';
   });
 })();
