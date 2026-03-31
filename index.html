@@ -946,22 +946,38 @@ function renderPanel(nbId, gridEl, titleEl, countEl) {
     ta.innerHTML = note.text;
     ta.addEventListener('input', () => { note.text = ta.innerHTML; debounceSave(); });
 
-    // Enter key in checklist — insert new line or new checklist item
+    // Enter key in checklist — always add new checkbox item if checklist exists
     ta.addEventListener('keydown', e => {
       if (e.key !== 'Enter') return;
-      const item = window.getSelection()?.anchorNode?.parentElement?.closest('.checklist-item');
-      if (!item) return;
+      // find if cursor is in or near a checklist item
+      const sel = window.getSelection();
+      const anchor = sel?.anchorNode;
+      const el = anchor?.nodeType === Node.TEXT_NODE ? anchor.parentElement : anchor;
+      const item = el?.closest('.checklist-item');
+      // also check if textarea contains any checklist items at all
+      const hasChecklist = ta.querySelector('.checklist-item');
+      if (!item && !hasChecklist) return; // no checklist, let default Enter work
+
       e.preventDefault();
       const newItem = document.createElement('div');
       newItem.className = 'checklist-item';
       newItem.innerHTML = '<input type="checkbox"><span>\u200B</span>';
-      item.after(newItem);
+
+      if (item) {
+        item.after(newItem);
+      } else {
+        // cursor is outside checklist items but checklist exists — append after last one
+        const allItems = ta.querySelectorAll('.checklist-item');
+        const lastItem = allItems[allItems.length - 1];
+        if (lastItem) lastItem.after(newItem);
+        else ta.appendChild(newItem);
+      }
+
       // place cursor in the new span
       const span = newItem.querySelector('span');
       const range = document.createRange();
       range.setStart(span, 0);
       range.collapse(true);
-      const sel = window.getSelection();
       sel.removeAllRanges();
       sel.addRange(range);
       note.text = ta.innerHTML;
