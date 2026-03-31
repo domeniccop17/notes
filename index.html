@@ -917,7 +917,7 @@ function renderPanel(nbId, gridEl, titleEl, countEl) {
 
         const resetSilenceTimer = () => {
           clearTimeout(silenceTimer);
-          silenceTimer = setTimeout(() => { if (window._activeRec === rec) rec.stop(); }, 400);
+          silenceTimer = setTimeout(() => { if (window._activeRec === rec) rec.stop(); }, 1000);
         };
 
         rec.onresult = ev => {
@@ -1320,7 +1320,7 @@ fetch('https://api.github.com/repos/domeniccop17/notes/commits?per_page=1')
 
     const resetSilenceTimer = () => {
       clearTimeout(silenceTimer);
-      silenceTimer = setTimeout(() => { if (window._smartRec === rec) rec.stop(); }, 400);
+      silenceTimer = setTimeout(() => { if (window._smartRec === rec) rec.stop(); }, 1000);
     };
 
     rec.onresult = ev => {
