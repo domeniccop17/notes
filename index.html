@@ -797,8 +797,18 @@ const undoStack = [];
 const MAX_UNDO = 50;
 let undoLock = false;
 
-function pushUndo() {
+function snapshotForUndo() {
   if (undoLock) return;
+  // sync DOM → state before snapshot
+  document.querySelectorAll('.note-textarea').forEach(ta => {
+    const noteId = ta.closest('[data-note-id]')?.dataset.noteId;
+    if (!noteId) return;
+    for (const nbId of [state.activeNotebook, state.secondaryNotebook]) {
+      if (!nbId) continue;
+      const note = state.notes[nbId]?.find(n => n.id === noteId);
+      if (note) { note.text = ta.innerHTML; break; }
+    }
+  });
   undoStack.push(JSON.stringify(state));
   if (undoStack.length > MAX_UNDO) undoStack.shift();
 }
@@ -826,7 +836,6 @@ function saveState() {
       if (note) { note.text = ta.innerHTML; break; }
     }
   });
-  pushUndo();
   try { localStorage.setItem('notes_app_v2', JSON.stringify(state)); } catch {}
 }
 
@@ -937,6 +946,28 @@ function renderPanel(nbId, gridEl, titleEl, countEl) {
     ta.innerHTML = note.text;
     ta.addEventListener('input', () => { note.text = ta.innerHTML; debounceSave(); });
 
+    // Enter key in checklist — insert new line or new checklist item
+    ta.addEventListener('keydown', e => {
+      if (e.key !== 'Enter') return;
+      const item = window.getSelection()?.anchorNode?.parentElement?.closest('.checklist-item');
+      if (!item) return;
+      e.preventDefault();
+      const newItem = document.createElement('div');
+      newItem.className = 'checklist-item';
+      newItem.innerHTML = '<input type="checkbox"><span>\u200B</span>';
+      item.after(newItem);
+      // place cursor in the new span
+      const span = newItem.querySelector('span');
+      const range = document.createRange();
+      range.setStart(span, 0);
+      range.collapse(true);
+      const sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(range);
+      note.text = ta.innerHTML;
+      debounceSave();
+    });
+
     // checkbox toggle — click checkbox to strike through
     ta.addEventListener('change', e => {
       if (e.target.type === 'checkbox') {
@@ -953,6 +984,7 @@ function renderPanel(nbId, gridEl, titleEl, countEl) {
       const content = ta.innerHTML.trim();
       if (!content || content === '<br>') return;
       listBtn.classList.add('processing');
+      snapshotForUndo();
       fetch('https://notes-polish.dcop14c.workers.dev', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1024,6 +1056,7 @@ function renderPanel(nbId, gridEl, titleEl, countEl) {
           const text = transcript.trim();
           if (!text) return;
           micBtn.classList.add('polishing');
+          snapshotForUndo();
 
           const currentContent = ta.innerHTML.trim();
           const hasContent = currentContent && currentContent !== '<br>';
@@ -1088,6 +1121,7 @@ function renderPanel(nbId, gridEl, titleEl, countEl) {
 
     card.querySelector('.note-delete-btn').addEventListener('click', e => {
       e.stopPropagation();
+      snapshotForUndo();
       const arr = state.notes[nb.id];
       if (arr.length > 1) {
         state.notes[nb.id] = arr.filter(n => n.id !== note.id);
@@ -1195,6 +1229,7 @@ function showNotebookCtx(e, nb) {
   document.getElementById('ctx-delete-nb').onclick = () => {
     hideCtx();
     if (state.notebooks.length <= 1) return;
+    snapshotForUndo();
     state.notebooks = state.notebooks.filter(n=>n.id!==nb.id);
     delete state.notes[nb.id];
     state.activeNotebook = state.notebooks[0].id;
@@ -1208,6 +1243,7 @@ function showNoteCtx(e, note, nbId) {
   posCtx(menu, e.clientX, e.clientY);
   document.getElementById('ctx-clear').onclick = () => {
     hideCtx();
+    snapshotForUndo();
     note.text = ''; note.tags = [];
     const ta = document.querySelector(`[data-note-id="${note.id}"] .note-textarea`);
     if (ta) ta.innerHTML = '';
@@ -1445,6 +1481,7 @@ fetch('https://api.github.com/repos/domeniccop17/notes/commits?per_page=1')
       if (!text) return;
 
       btn.classList.add('processing');
+      snapshotForUndo();
       const nbNames = state.notebooks.map(n => n.name);
       const activeNb = state.notebooks.find(n => n.id === state.activeNotebook);
       const activeNotes = (state.notes[state.activeNotebook] || []).map(n => ({
