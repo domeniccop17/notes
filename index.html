@@ -792,6 +792,30 @@ function uid() { return Math.random().toString(36).slice(2,9); }
   if (typeof state.activeNotebook === 'undefined') state.activeNotebook = state.notebooks[0].id;
 })();
 
+// — UNDO HISTORY —————————————————————————
+const undoStack = [];
+const MAX_UNDO = 50;
+let undoLock = false;
+
+function pushUndo() {
+  if (undoLock) return;
+  undoStack.push(JSON.stringify(state));
+  if (undoStack.length > MAX_UNDO) undoStack.shift();
+}
+
+function undo() {
+  if (!undoStack.length) return;
+  undoLock = true;
+  const prev = JSON.parse(undoStack.pop());
+  state.notebooks = prev.notebooks;
+  state.notes = prev.notes;
+  state.activeNotebook = prev.activeNotebook;
+  state.secondaryNotebook = prev.secondaryNotebook;
+  try { localStorage.setItem('notes_app_v2', JSON.stringify(state)); } catch {}
+  render();
+  undoLock = false;
+}
+
 function saveState() {
   document.querySelectorAll('.note-textarea').forEach(ta => {
     const noteId = ta.closest('[data-note-id]')?.dataset.noteId;
@@ -802,6 +826,7 @@ function saveState() {
       if (note) { note.text = ta.innerHTML; break; }
     }
   });
+  pushUndo();
   try { localStorage.setItem('notes_app_v2', JSON.stringify(state)); } catch {}
 }
 
@@ -1248,6 +1273,12 @@ document.getElementById('addNoteBtn').onclick = () => {
 (function() {
   let spaceHeld = false;
   document.addEventListener('keydown', e => {
+    // Ctrl+Z → undo (global, works even in contenteditable)
+    if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
+      e.preventDefault();
+      undo();
+      return;
+    }
     if (e.target.closest('input, [contenteditable]')) return;
     if (e.code === 'Space') { spaceHeld = true; e.preventDefault(); }
     if (spaceHeld && (e.key === 'r' || e.key === 'R')) {
