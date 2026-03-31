@@ -815,8 +815,10 @@ const undoStack = [];
 const redoStack = [];
 const MAX_UNDO = 50;
 let undoLock = false;
+let lastSnapshot = '';
 
-function syncDomToState() {
+function getStateSnapshot() {
+  // sync DOM to state first
   document.querySelectorAll('.note-textarea').forEach(ta => {
     const noteId = ta.closest('[data-note-id]')?.dataset.noteId;
     if (!noteId) return;
@@ -826,43 +828,49 @@ function syncDomToState() {
       if (note) { note.text = ta.innerHTML; break; }
     }
   });
+  return JSON.stringify(state);
 }
 
-function snapshotForUndo() {
+function restoreState(snapshot) {
+  const s = JSON.parse(snapshot);
+  state.notebooks = s.notebooks;
+  state.notes = s.notes;
+  state.activeNotebook = s.activeNotebook;
+  state.secondaryNotebook = s.secondaryNotebook;
+  try { localStorage.setItem('notes_app_v2', snapshot); } catch {}
+  render();
+}
+
+function pushToUndo(snapshot) {
   if (undoLock) return;
-  syncDomToState();
-  undoStack.push(JSON.stringify(state));
+  if (snapshot === lastSnapshot) return; // skip duplicates
+  undoStack.push(snapshot);
   if (undoStack.length > MAX_UNDO) undoStack.shift();
   redoStack.length = 0;
+  lastSnapshot = snapshot;
+}
+
+// call before a destructive/AI action to save current state
+function snapshotForUndo() {
+  if (undoLock) return;
+  pushToUndo(getStateSnapshot());
 }
 
 function undo() {
   if (!undoStack.length) return;
   undoLock = true;
-  syncDomToState();
-  redoStack.push(JSON.stringify(state));
-  const prev = JSON.parse(undoStack.pop());
-  state.notebooks = prev.notebooks;
-  state.notes = prev.notes;
-  state.activeNotebook = prev.activeNotebook;
-  state.secondaryNotebook = prev.secondaryNotebook;
-  try { localStorage.setItem('notes_app_v2', JSON.stringify(state)); } catch {}
-  render();
+  redoStack.push(getStateSnapshot());
+  restoreState(undoStack.pop());
+  lastSnapshot = getStateSnapshot();
   undoLock = false;
 }
 
 function redo() {
   if (!redoStack.length) return;
   undoLock = true;
-  syncDomToState();
-  undoStack.push(JSON.stringify(state));
-  const next = JSON.parse(redoStack.pop());
-  state.notebooks = next.notebooks;
-  state.notes = next.notes;
-  state.activeNotebook = next.activeNotebook;
-  state.secondaryNotebook = next.secondaryNotebook;
-  try { localStorage.setItem('notes_app_v2', JSON.stringify(state)); } catch {}
-  render();
+  undoStack.push(getStateSnapshot());
+  restoreState(redoStack.pop());
+  lastSnapshot = getStateSnapshot();
   undoLock = false;
 }
 
@@ -876,7 +884,10 @@ function saveState() {
       if (note) { note.text = ta.innerHTML; break; }
     }
   });
-  try { localStorage.setItem('notes_app_v2', JSON.stringify(state)); } catch {}
+  // auto-snapshot on every save for undo
+  const snap = JSON.stringify(state);
+  pushToUndo(snap);
+  try { localStorage.setItem('notes_app_v2', snap); } catch {}
 }
 
 function loadState() {
@@ -984,14 +995,7 @@ function renderPanel(nbId, gridEl, titleEl, countEl) {
 
     const ta = card.querySelector('.note-textarea');
     ta.innerHTML = note.text;
-    let typingSnapshotted = false;
-    ta.addEventListener('input', () => {
-      if (!typingSnapshotted) { snapshotForUndo(); typingSnapshotted = true; }
-      note.text = ta.innerHTML;
-      debounceSave();
-      clearTimeout(ta._typingReset);
-      ta._typingReset = setTimeout(() => { typingSnapshotted = false; }, 2000);
-    });
+    ta.addEventListener('input', () => { note.text = ta.innerHTML; debounceSave(); });
 
     // Backspace in checklist — remove empty item in one press
     ta.addEventListener('keydown', e => {
@@ -1408,17 +1412,13 @@ document.getElementById('addNoteBtn').onclick = () => {
   document.addEventListener('keydown', e => {
     // Ctrl+Z → undo, Ctrl+Y → redo
     if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
-      if (undoStack.length) {
-        e.preventDefault();
-        undo();
-      }
+      e.preventDefault();
+      undo();
       return;
     }
     if ((e.ctrlKey || e.metaKey) && e.key === 'y') {
-      if (redoStack.length) {
-        e.preventDefault();
-        redo();
-      }
+      e.preventDefault();
+      redo();
       return;
     }
     if (e.target.closest('input, [contenteditable]')) return;
