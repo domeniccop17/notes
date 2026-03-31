@@ -251,6 +251,11 @@
   :root.dark .note-card:hover { background: #1e1d1a; }
   .note-card.dragging { opacity: 0.35; }
   .note-card.drag-over { box-shadow: inset 0 0 0 2px var(--accent); }
+  .note-card.mic-active { box-shadow: inset 0 0 0 2px #FF1744; animation: cardpulse 1.2s ease-in-out infinite; }
+  @keyframes cardpulse {
+    0%,100% { box-shadow: inset 0 0 0 2px rgba(255,23,68,0.6); }
+    50% { box-shadow: inset 0 0 0 2px rgba(255,23,68,1); }
+  }
   .note-mic-btn {
     position: relative;
     background: none; border: none; cursor: pointer;
@@ -919,6 +924,7 @@ function renderPanel(nbId, gridEl, titleEl, countEl) {
         // polish or edit when recording ends (user clicks to stop)
         rec.onend = () => {
           micBtn.classList.remove('recording');
+          card.classList.remove('mic-active');
           window._activeRec = null; window._activeMicBtn = null;
           const text = transcript.trim();
           if (!text) return;
@@ -973,11 +979,13 @@ function renderPanel(nbId, gridEl, titleEl, countEl) {
         };
         rec.onerror = () => {
           micBtn.classList.remove('recording');
+          card.classList.remove('mic-active');
           window._activeRec = null; window._activeMicBtn = null;
         };
 
         transcript = '';
         micBtn.classList.add('recording');
+        card.classList.add('mic-active');
         window._activeRec = rec; window._activeMicBtn = micBtn;
         rec.start();
       });
