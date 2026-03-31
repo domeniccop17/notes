@@ -381,6 +381,16 @@
   }
 
   .note-card:hover .note-menu-btn { opacity: 1; }
+  .note-clear-btn {
+    font-family: 'DM Mono', monospace;
+    font-size: 9px; letter-spacing: 0.05em; text-transform: uppercase;
+    background: none; border: 1px solid var(--border); color: var(--muted);
+    padding: 2px 8px; border-radius: 3px; cursor: pointer;
+    opacity: 0; transition: opacity 0.15s, color 0.15s, border-color 0.15s;
+    flex-shrink: 0;
+  }
+  .note-card:hover .note-clear-btn { opacity: 0.6; }
+  .note-card:hover .note-clear-btn:hover { opacity: 1; color: var(--danger); border-color: var(--danger); }
 
   .note-body {
     flex: 1;
@@ -931,8 +941,7 @@ function renderPanel(nbId, gridEl, titleEl, countEl) {
         </div>
         <button class="note-list-btn" title="AI organize as checklist">☑</button>
         <button class="note-mic-btn" title="Voice to text">🎤</button>
-        <button class="note-delete-btn note-menu-btn" title="Delete note">×</button>
-        <button class="note-menu-btn" title="Options">···</button>
+        <button class="note-clear-btn" title="Clear note">clear</button>
       </div>
       <div class="note-body">
         <div class="note-textarea" contenteditable="true" spellcheck="false" data-placeholder="${PLACEHOLDERS[idx % PLACEHOLDERS.length]}"></div>
@@ -1163,21 +1172,15 @@ function renderPanel(nbId, gridEl, titleEl, countEl) {
       });
     }
 
-    card.querySelector('.note-delete-btn').addEventListener('click', e => {
+    card.querySelector('.note-clear-btn').addEventListener('click', e => {
       e.stopPropagation();
       snapshotForUndo();
-      const arr = state.notes[nb.id];
-      if (arr.length > 1) {
-        state.notes[nb.id] = arr.filter(n => n.id !== note.id);
-      } else {
-        state.notes[nb.id] = [makeNote()];
-      }
-      saveState(); renderNotes();
-    });
-
-    card.querySelector('.note-menu-btn').addEventListener('click', e => {
-      e.stopPropagation();
-      showNoteCtx(e, note, nb.id);
+      note.text = '';
+      note.title = '';
+      note.tags = [];
+      ta.innerHTML = '';
+      titleInput.value = 'Note ' + (idx + 1);
+      saveState();
     });
 
     card.querySelector('.note-header').addEventListener('dragstart', e => {
