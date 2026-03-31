@@ -810,14 +810,13 @@ function uid() { return Math.random().toString(36).slice(2,9); }
   if (typeof state.activeNotebook === 'undefined') state.activeNotebook = state.notebooks[0].id;
 })();
 
-// — UNDO HISTORY —————————————————————————
+// — UNDO / REDO HISTORY ——————————————————
 const undoStack = [];
+const redoStack = [];
 const MAX_UNDO = 50;
 let undoLock = false;
 
-function snapshotForUndo() {
-  if (undoLock) return;
-  // sync DOM → state before snapshot
+function syncDomToState() {
   document.querySelectorAll('.note-textarea').forEach(ta => {
     const noteId = ta.closest('[data-note-id]')?.dataset.noteId;
     if (!noteId) return;
@@ -827,18 +826,41 @@ function snapshotForUndo() {
       if (note) { note.text = ta.innerHTML; break; }
     }
   });
+}
+
+function snapshotForUndo() {
+  if (undoLock) return;
+  syncDomToState();
   undoStack.push(JSON.stringify(state));
   if (undoStack.length > MAX_UNDO) undoStack.shift();
+  redoStack.length = 0;
 }
 
 function undo() {
   if (!undoStack.length) return;
   undoLock = true;
+  syncDomToState();
+  redoStack.push(JSON.stringify(state));
   const prev = JSON.parse(undoStack.pop());
   state.notebooks = prev.notebooks;
   state.notes = prev.notes;
   state.activeNotebook = prev.activeNotebook;
   state.secondaryNotebook = prev.secondaryNotebook;
+  try { localStorage.setItem('notes_app_v2', JSON.stringify(state)); } catch {}
+  render();
+  undoLock = false;
+}
+
+function redo() {
+  if (!redoStack.length) return;
+  undoLock = true;
+  syncDomToState();
+  undoStack.push(JSON.stringify(state));
+  const next = JSON.parse(redoStack.pop());
+  state.notebooks = next.notebooks;
+  state.notes = next.notes;
+  state.activeNotebook = next.activeNotebook;
+  state.secondaryNotebook = next.secondaryNotebook;
   try { localStorage.setItem('notes_app_v2', JSON.stringify(state)); } catch {}
   render();
   undoLock = false;
@@ -1377,10 +1399,15 @@ document.getElementById('addNoteBtn').onclick = () => {
 (function() {
   let spaceHeld = false;
   document.addEventListener('keydown', e => {
-    // Ctrl+Z → undo (global, works even in contenteditable)
+    // Ctrl+Z → undo, Ctrl+Y → redo
     if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
       e.preventDefault();
       undo();
+      return;
+    }
+    if ((e.ctrlKey || e.metaKey) && e.key === 'y') {
+      e.preventDefault();
+      redo();
       return;
     }
     if (e.target.closest('input, [contenteditable]')) return;
