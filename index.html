@@ -984,7 +984,14 @@ function renderPanel(nbId, gridEl, titleEl, countEl) {
 
     const ta = card.querySelector('.note-textarea');
     ta.innerHTML = note.text;
-    ta.addEventListener('input', () => { note.text = ta.innerHTML; debounceSave(); });
+    let typingSnapshotted = false;
+    ta.addEventListener('input', () => {
+      if (!typingSnapshotted) { snapshotForUndo(); typingSnapshotted = true; }
+      note.text = ta.innerHTML;
+      debounceSave();
+      clearTimeout(ta._typingReset);
+      ta._typingReset = setTimeout(() => { typingSnapshotted = false; }, 2000);
+    });
 
     // Backspace in checklist — remove empty item in one press
     ta.addEventListener('keydown', e => {
@@ -1401,13 +1408,17 @@ document.getElementById('addNoteBtn').onclick = () => {
   document.addEventListener('keydown', e => {
     // Ctrl+Z → undo, Ctrl+Y → redo
     if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
-      e.preventDefault();
-      undo();
+      if (undoStack.length) {
+        e.preventDefault();
+        undo();
+      }
       return;
     }
     if ((e.ctrlKey || e.metaKey) && e.key === 'y') {
-      e.preventDefault();
-      redo();
+      if (redoStack.length) {
+        e.preventDefault();
+        redo();
+      }
       return;
     }
     if (e.target.closest('input, [contenteditable]')) return;
