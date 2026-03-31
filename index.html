@@ -622,7 +622,7 @@
 <header>
   <div style="display:flex;align-items:center;gap:14px">
     <span class="logo">notes</span>
-    <button class="smart-record-btn" id="smartRecordBtn" title="Smart record — AI sorts into the right notebook">🧠 Record</button>
+    <button class="smart-record-btn" id="smartRecordBtn" title="Smart record (Ctrl+Shift+R)">● Record</button>
   </div>
   <div class="header-actions">
     <button class="btn icon-btn" id="darkModeBtn" title="Toggle dark mode">☀️</button>
@@ -1173,6 +1173,15 @@ document.getElementById('addNoteBtn').onclick = () => {
   state.notes[nb.id].unshift(makeNote());
   saveState(); renderNotes();
 };
+
+// — KEYBOARD SHORTCUTS ————————————————————
+document.addEventListener('keydown', e => {
+  // Ctrl+Shift+R → toggle Smart Record
+  if (e.ctrlKey && e.shiftKey && e.key === 'R') {
+    e.preventDefault();
+    document.getElementById('smartRecordBtn').click();
+  }
+});
 
 // — CLOSE POPUPS —————————————————————————
 document.addEventListener('click', e => {
