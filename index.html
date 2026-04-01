@@ -349,6 +349,13 @@
     min-width: 0;
   }
 
+  .note-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+  }
+
   .note-color-dot {
     width: 9px;
     height: 9px;
@@ -1062,10 +1069,12 @@ function renderPanel(nbId, gridEl, titleEl, countEl) {
           <div class="note-color-dot" style="background:${nb.color}"></div>
           <input class="note-title" value="${escHtml(note.title || 'Note ' + (idx+1))}" spellcheck="false" />
         </div>
-        <button class="note-list-btn" title="AI organize as checklist">☑</button>
-        <button class="note-mic-btn" title="Voice to text">🎤</button>
-        <button class="note-clear-btn" title="Clear note">clear</button>
-        <button class="note-delete-btn" title="Delete note">🗑</button>
+        <div class="note-actions">
+          <button class="note-list-btn" title="AI organize as checklist">☑</button>
+          <button class="note-mic-btn" title="Voice to text">🎤</button>
+          <button class="note-clear-btn" title="Clear note">clear</button>
+          <button class="note-delete-btn" title="Delete note">🗑</button>
+        </div>
       </div>
       <div class="note-body">
         <div class="note-textarea" contenteditable="true" spellcheck="false" data-placeholder="${PLACEHOLDERS[idx % PLACEHOLDERS.length]}"></div>
