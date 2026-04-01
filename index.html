@@ -1372,9 +1372,16 @@ function renderPanel(nbId, gridEl, titleEl, countEl) {
       note.text = '';
       note.title = '';
       note.tags = [];
-      ta.innerHTML = '';
-      titleInput.value = 'Note ' + (idx + 1);
-      saveState();
+      // If first note is cleared, move it to end of notebook
+      const arr = state.notes[nb.id];
+      if (idx === 0 && arr.length > 1) {
+        arr.push(arr.shift());
+        saveState(); render();
+      } else {
+        ta.innerHTML = '';
+        titleInput.value = 'Note ' + (idx + 1);
+        saveState();
+      }
     });
 
     card.querySelector('.note-delete-btn').addEventListener('click', e => {
