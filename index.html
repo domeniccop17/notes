@@ -847,6 +847,49 @@ function uid() { return Math.random().toString(36).slice(2,9); }
   if (typeof state.activeNotebook === 'undefined') state.activeNotebook = state.notebooks[0].id;
 })();
 
+// — AUTO-DELETE checked checkboxes after 15 min ——
+const CHECKED_TS_KEY = 'notes_checked_timestamps';
+function getCheckedTimestamps() {
+  try { return JSON.parse(localStorage.getItem(CHECKED_TS_KEY)) || {}; } catch { return {}; }
+}
+function saveCheckedTimestamps(ts) {
+  try { localStorage.setItem(CHECKED_TS_KEY, JSON.stringify(ts)); } catch {}
+}
+// On load: remove items checked 15+ min ago
+(function autoDeleteChecked() {
+  const ts = getCheckedTimestamps();
+  const now = Date.now();
+  const FIFTEEN_MIN = 15 * 60 * 1000;
+  let changed = false;
+  for (const nbId in state.notes) {
+    for (const note of state.notes[nbId]) {
+      const div = document.createElement('div');
+      div.innerHTML = note.text;
+      const items = div.querySelectorAll('.checklist-item.checked');
+      let noteChanged = false;
+      items.forEach(item => {
+        const txt = item.textContent.trim();
+        const key = nbId + ':' + note.id + ':' + txt;
+        if (ts[key] && (now - ts[key]) >= FIFTEEN_MIN) {
+          item.remove();
+          delete ts[key];
+          noteChanged = true;
+          changed = true;
+        }
+      });
+      if (noteChanged) note.text = div.innerHTML;
+    }
+  }
+  // Clean up stale timestamps
+  for (const key in ts) {
+    if ((now - ts[key]) >= FIFTEEN_MIN) delete ts[key];
+  }
+  if (changed) {
+    try { localStorage.setItem('notes_app_v2', JSON.stringify(state)); } catch {}
+  }
+  saveCheckedTimestamps(ts);
+})();
+
 // — UNDO / REDO (structural actions only) ——
 // Text typing undo is handled natively by the browser (contenteditable).
 // This system only handles: AI edits, delete note, clear note, smart record.
@@ -1101,11 +1144,21 @@ function renderPanel(nbId, gridEl, titleEl, countEl) {
       debounceSave();
     });
 
-    // checkbox toggle — click checkbox to strike through
+    // checkbox toggle — click checkbox to strike through + track timestamp
     ta.addEventListener('change', e => {
       if (e.target.type === 'checkbox') {
         const item = e.target.closest('.checklist-item');
-        if (item) { item.classList.toggle('checked', e.target.checked); note.text = ta.innerHTML; debounceSave(); }
+        if (item) {
+          item.classList.toggle('checked', e.target.checked);
+          note.text = ta.innerHTML; debounceSave();
+          // Track checked timestamp for auto-delete
+          const nbId = ta.closest('[data-notebook-id]')?.dataset.notebookId || state.activeNotebook;
+          const txt = item.textContent.trim();
+          const key = nbId + ':' + note.id + ':' + txt;
+          const ts = getCheckedTimestamps();
+          if (e.target.checked) { ts[key] = Date.now(); } else { delete ts[key]; }
+          saveCheckedTimestamps(ts);
+        }
       }
     });
 
@@ -1116,9 +1169,28 @@ function renderPanel(nbId, gridEl, titleEl, countEl) {
       if (listBtn.classList.contains('processing')) return;
       const sel = window.getSelection();
       const hasSelection = sel && !sel.isCollapsed && ta.contains(sel.anchorNode);
-      const content = hasSelection ? sel.toString().trim() : ta.innerHTML.trim();
+      let savedRange = null;
+      let content;
+      if (hasSelection) {
+        // Expand range to cover full checklist-item elements
+        const range = sel.getRangeAt(0);
+        const expandedRange = range.cloneRange();
+        let startNode = range.startContainer;
+        const startItem = startNode.nodeType === 1 ? startNode.closest('.checklist-item') : startNode.parentElement?.closest('.checklist-item');
+        if (startItem) expandedRange.setStartBefore(startItem);
+        let endNode = range.endContainer;
+        const endItem = endNode.nodeType === 1 ? endNode.closest('.checklist-item') : endNode.parentElement?.closest('.checklist-item');
+        if (endItem) expandedRange.setEndAfter(endItem);
+        savedRange = expandedRange;
+        // Get HTML of selected region to preserve checklist structure
+        const frag = expandedRange.cloneContents();
+        const tmp = document.createElement('div');
+        tmp.appendChild(frag);
+        content = tmp.innerHTML.trim();
+      } else {
+        content = ta.innerHTML.trim();
+      }
       if (!content || content === '<br>') return;
-      const savedRange = hasSelection ? sel.getRangeAt(0).cloneRange() : null;
       listBtn.classList.add('processing');
       snapshotForUndo();
       fetch('https://notes-polish.dcop14c.workers.dev', {
