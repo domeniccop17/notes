@@ -1079,13 +1079,17 @@ function renderPanel(nbId, gridEl, titleEl, countEl) {
 
     const ta = card.querySelector('.note-textarea');
     ta.innerHTML = note.text;
-    let _lastSnap = 0;
+    let _lastSnap = Date.now();
+    let _snapTimer = null;
     ta.addEventListener('input', () => {
       note.text = ta.innerHTML;
       debounceSave();
-      // Snapshot every 3 seconds of typing for undo history
+      // Snapshot every 1.5s of typing for undo history
+      // Also snapshot 1s after typing stops to capture final state
+      clearTimeout(_snapTimer);
       const now = Date.now();
       if (now - _lastSnap > 1500) { snapshotForUndo(); _lastSnap = now; }
+      _snapTimer = setTimeout(() => { snapshotForUndo(); _lastSnap = Date.now(); }, 1000);
       // If note becomes empty, move it to end of notebook
       const isEmpty = !ta.textContent.trim() && !ta.querySelector('img');
       const arr = state.notes[nb.id];
