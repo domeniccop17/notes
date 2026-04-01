@@ -1085,6 +1085,9 @@ function renderPanel(nbId, gridEl, titleEl, countEl) {
       const arr = state.notes[nb.id];
       const curIdx = arr.indexOf(note);
       if (isEmpty && arr.length > 1 && curIdx < arr.length - 1) {
+        snapshotForUndo();
+        note.text = '';
+        note.title = '';
         arr.splice(curIdx, 1);
         arr.push(note);
         saveState(); render();
