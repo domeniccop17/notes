@@ -668,7 +668,7 @@
 <header>
   <div style="display:flex;align-items:center;gap:14px">
     <span class="logo">notes</span>
-    <button class="smart-record-btn" id="smartRecordBtn" title="Smart record (Space+R)">● Record</button>
+    <button class="smart-record-btn" id="smartRecordBtn" title="Smart record (Alt+R)">● Record</button>
   </div>
   <div class="header-actions">
     <button class="btn icon-btn" id="darkModeBtn" title="Toggle dark mode">☀️</button>
@@ -1423,17 +1423,12 @@ document.getElementById('addNoteBtn').onclick = () => {
       if (redoStack.length) { e.preventDefault(); structuralRedo(); }
       return;
     }
-    if (e.target.closest('input, [contenteditable]')) return;
-    if (e.code === 'Space') { spaceHeld = true; e.preventDefault(); }
-    if (spaceHeld && (e.key === 'r' || e.key === 'R')) {
+    if (e.altKey && (e.key === 'r' || e.key === 'R')) {
       e.preventDefault();
       document.getElementById('smartRecordBtn').click();
-      spaceHeld = false;
+      return;
     }
-  });
-  document.addEventListener('keyup', e => {
-    if (e.code === 'Space') spaceHeld = false;
-  });
+    if (e.target.closest('input, [contenteditable]')) return;
 })();
 
 // — CLOSE POPUPS —————————————————————————
