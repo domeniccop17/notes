@@ -1594,17 +1594,35 @@ document.getElementById('addNoteBtn').onclick = () => {
 (function() {
   let spaceHeld = false;
   document.addEventListener('keydown', e => {
-    // Ctrl+Z / Ctrl+Y — let browser handle natively in text fields
-    // Only use structural undo/redo when NOT typing in a note
+    // Ctrl+Z / Ctrl+Y — structural undo/redo (covers AI edits, checklist organize, etc.)
     if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
-      if (e.target.closest('[contenteditable], input')) return; // native undo
       if (undoStack.length) { e.preventDefault(); structuralUndo(); }
       return;
     }
     if ((e.ctrlKey || e.metaKey) && e.key === 'y') {
-      if (e.target.closest('[contenteditable], input')) return; // native redo
       if (redoStack.length) { e.preventDefault(); structuralRedo(); }
       return;
+    }
+    // Ctrl+G = bold, Ctrl+U = underline, Ctrl+B = bullet list
+    if ((e.ctrlKey || e.metaKey) && e.target.closest('[contenteditable]')) {
+      if (e.key === 'g' || e.key === 'G') {
+        e.preventDefault();
+        document.execCommand('bold');
+        return;
+      }
+      if (e.key === 'u' || e.key === 'U') {
+        e.preventDefault();
+        document.execCommand('underline');
+        return;
+      }
+      if (e.key === 'b' || e.key === 'B') {
+        e.preventDefault();
+        const sel = window.getSelection();
+        if (sel && !sel.isCollapsed) {
+          document.execCommand('insertUnorderedList');
+        }
+        return;
+      }
     }
     if (e.altKey && (e.key === 'r' || e.key === 'R')) {
       e.preventDefault();
