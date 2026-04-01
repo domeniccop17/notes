@@ -1384,6 +1384,9 @@ function renderPanel(nbId, gridEl, titleEl, countEl) {
     card.querySelector('.note-clear-btn').addEventListener('click', e => {
       e.stopPropagation();
       snapshotForUndo();
+      // Clear DOM first to prevent input handler from re-syncing old content
+      ta.innerHTML = '';
+      titleInput.value = '';
       note.text = '';
       note.title = '';
       note.tags = [];
