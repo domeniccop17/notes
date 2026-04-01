@@ -156,11 +156,14 @@
 
   .notebook-dot {
     flex-shrink: 0;
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: var(--nb-color);
-    transition: background 0.2s;
+    width: 14px;
+    height: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    line-height: 1;
+    transition: color 0.2s;
   }
 
   .notebook-name {
@@ -534,12 +537,25 @@
     border: 1px solid var(--border);
     border-radius: 8px;
     padding: 10px;
-    display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
-    width: 144px;
     z-index: 100;
     box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+    width: 168px;
+  }
+
+  .picker-section-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
+  .picker-section-label:not(:first-child) { margin-top: 8px; }
+
+  .picker-row {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
   }
 
   .color-swatch {
@@ -553,6 +569,22 @@
 
   .color-swatch:hover { transform: scale(1.15); }
   .color-swatch.selected { border-color: var(--text); }
+
+  .symbol-swatch {
+    width: 22px;
+    height: 22px;
+    border-radius: 4px;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: transform 0.12s, border-color 0.12s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    line-height: 1;
+  }
+  .symbol-swatch:hover { transform: scale(1.15); }
+  .symbol-swatch.selected { border-color: var(--text); }
 
   /* CONTEXT MENU */
   .ctx-menu {
@@ -749,6 +781,11 @@ const COLORS = [
   '#FFD740','#40C4FF','#EA80FC','#B2FF59','#FF6E40'
 ];
 
+const SYMBOLS = [
+  '●','♪','★','♥','◆','▲','■','☁','⚡','✿',
+  '☀','✦','♠','⬟','◉','☂','✎','⚙','♦','◈'
+];
+
 const PLACEHOLDERS = [
   'Start typing', 'Add a note', 'What\'s on your mind?',
   'Write something', 'Jot it down'
@@ -912,7 +949,7 @@ function renderSidebar() {
     const count = (state.notes[nb.id] || []).filter(n=>n.text.trim()).length;
     const isSplit = nb.id === state.secondaryNotebook;
     div.innerHTML = `
-      <div class="notebook-dot" style="background:${nb.color}"></div>
+      <div class="notebook-dot" style="color:${nb.color}">${nb.symbol || '●'}</div>
       <span class="notebook-name">${escHtml(nb.name)}</span>
       <span class="notebook-count">${count}</span>
       <button class="nb-split-btn${isSplit ? ' split-active' : ''}" title="Open beside">⊞</button>
@@ -1072,13 +1109,16 @@ function renderPanel(nbId, gridEl, titleEl, countEl) {
       }
     });
 
-    // AI list button — organize note content as checklist
+    // AI list button — organize note content (or selection) as checklist
     const listBtn = card.querySelector('.note-list-btn');
     listBtn.addEventListener('click', e => {
       e.stopPropagation();
       if (listBtn.classList.contains('processing')) return;
-      const content = ta.innerHTML.trim();
+      const sel = window.getSelection();
+      const hasSelection = sel && !sel.isCollapsed && ta.contains(sel.anchorNode);
+      const content = hasSelection ? sel.toString().trim() : ta.innerHTML.trim();
       if (!content || content === '<br>') return;
+      const savedRange = hasSelection ? sel.getRangeAt(0).cloneRange() : null;
       listBtn.classList.add('processing');
       snapshotForUndo();
       fetch('https://notes-polish.dcop14c.workers.dev', {
@@ -1090,7 +1130,13 @@ function renderPanel(nbId, gridEl, titleEl, countEl) {
         .then(r => r.ok ? r.json() : Promise.reject())
         .then(data => {
           if (data.content) {
-            ta.innerHTML = data.content;
+            if (savedRange) {
+              sel.removeAllRanges();
+              sel.addRange(savedRange);
+              document.execCommand('insertHTML', false, data.content);
+            } else {
+              ta.innerHTML = data.content;
+            }
             note.text = ta.innerHTML;
             debounceSave();
           }
@@ -1106,6 +1152,12 @@ function renderPanel(nbId, gridEl, titleEl, countEl) {
       micBtn.addEventListener('click', e => {
         e.stopPropagation();
         if (micBtn.classList.contains('polishing')) return;
+
+        // Capture selection before recording starts
+        const sel = window.getSelection();
+        const hasSelection = sel && !sel.isCollapsed && ta.contains(sel.anchorNode);
+        const savedSelRange = hasSelection ? sel.getRangeAt(0).cloneRange() : null;
+        const selectedText = hasSelection ? sel.toString().trim() : '';
 
         // — stop active recording, polish accumulated transcript —
         if (window._activeRec && window._activeMicBtn === micBtn) {
@@ -1157,7 +1209,33 @@ function renderPanel(nbId, gridEl, titleEl, countEl) {
           const currentContent = ta.innerHTML.trim();
           const hasContent = currentContent && currentContent !== '<br>';
 
-          if (hasContent) {
+          if (savedSelRange) {
+            // Selection mode → AI edit only the selected portion
+            fetch('https://notes-polish.dcop14c.workers.dev', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ text, mode: 'note-edit', noteContent: selectedText }),
+              signal: AbortSignal.timeout(20000),
+            })
+              .then(r => r.ok ? r.json() : Promise.reject())
+              .then(data => {
+                if (data.content) {
+                  const s = window.getSelection();
+                  s.removeAllRanges();
+                  s.addRange(savedSelRange);
+                  document.execCommand('insertHTML', false, data.content);
+                  note.text = ta.innerHTML;
+                  debounceSave();
+                }
+              })
+              .catch(() => {
+                ta.focus();
+                document.execCommand('insertText', false, text + ' ');
+                note.text = ta.innerHTML;
+                debounceSave();
+              })
+              .finally(() => micBtn.classList.remove('polishing'));
+          } else if (hasContent) {
             // Note has content → AI edit mode
             fetch('https://notes-polish.dcop14c.workers.dev', {
               method: 'POST',
@@ -1292,6 +1370,15 @@ function showColorPicker(anchor, nb) {
   const picker = document.getElementById('colorPicker');
   picker.innerHTML = '';
   const usedColors = state.notebooks.filter(n => n.id !== nb.id).map(n => n.color);
+
+  // Color section
+  const colorLabel = document.createElement('div');
+  colorLabel.className = 'picker-section-label';
+  colorLabel.textContent = 'Color';
+  picker.appendChild(colorLabel);
+
+  const colorRow = document.createElement('div');
+  colorRow.className = 'picker-row';
   COLORS.forEach(c => {
     const sw = document.createElement('div');
     sw.className = 'color-swatch' + (nb.color===c?' selected':'') + (usedColors.includes(c)?' color-used':'');
@@ -1300,10 +1387,34 @@ function showColorPicker(anchor, nb) {
       e.stopPropagation();
       nb.color = c;
       saveState(); render();
+      showColorPicker(anchor, nb);
+    });
+    colorRow.appendChild(sw);
+  });
+  picker.appendChild(colorRow);
+
+  // Symbol section
+  const symLabel = document.createElement('div');
+  symLabel.className = 'picker-section-label';
+  symLabel.textContent = 'Symbol';
+  picker.appendChild(symLabel);
+
+  const symRow = document.createElement('div');
+  symRow.className = 'picker-row';
+  SYMBOLS.forEach(s => {
+    const sw = document.createElement('div');
+    sw.className = 'symbol-swatch' + ((nb.symbol || '●')===s?' selected':'');
+    sw.style.color = nb.color;
+    sw.textContent = s;
+    sw.addEventListener('click', e => {
+      e.stopPropagation();
+      nb.symbol = s;
+      saveState(); render();
       picker.classList.add('hidden');
     });
-    picker.appendChild(sw);
+    symRow.appendChild(sw);
   });
+  picker.appendChild(symRow);
 
   const rect = anchor.getBoundingClientRect();
   picker.style.left = rect.left + 'px';
