@@ -869,8 +869,8 @@ function saveCheckedTimestamps(ts) {
       const items = div.querySelectorAll('.checklist-item.checked');
       let noteChanged = false;
       items.forEach(item => {
-        const txt = item.textContent.trim();
-        const key = nbId + ':' + note.id + ':' + txt;
+        const txt = (item.querySelector('span')?.textContent || item.textContent).trim();
+        const key = note.id + ':' + txt;
         if (ts[key] && (now - ts[key]) >= FIFTEEN_MIN) {
           item.remove();
           delete ts[key];
@@ -1170,9 +1170,8 @@ function renderPanel(nbId, gridEl, titleEl, countEl) {
           item.classList.toggle('checked', e.target.checked);
           note.text = ta.innerHTML; debounceSave();
           // Track checked timestamp for auto-delete
-          const nbId = ta.closest('[data-notebook-id]')?.dataset.notebookId || state.activeNotebook;
-          const txt = item.textContent.trim();
-          const key = nbId + ':' + note.id + ':' + txt;
+          const txt = (item.querySelector('span')?.textContent || item.textContent).trim();
+          const key = note.id + ':' + txt;
           const ts = getCheckedTimestamps();
           if (e.target.checked) { ts[key] = Date.now(); } else { delete ts[key]; }
           saveCheckedTimestamps(ts);
