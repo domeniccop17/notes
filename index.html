@@ -756,6 +756,7 @@
 <div class="format-toolbar" id="formatToolbar">
   <button class="format-btn" id="fmtBold" title="Gras" style="font-weight:900; color:#111; font-size:14px;">G</button>
   <button class="format-btn" id="fmtUnderline" title="Souligné"><u style="text-underline-offset:3px;">S</u></button>
+  <button class="format-btn" id="fmtItalic" title="Italique" style="font-style:italic; font-size:14px;">I</button>
   <button class="format-btn" id="fmtBullet" title="Liste à puces" style="font-size:22px; line-height:1;">•</button>
   <button class="format-btn" id="fmtCheck" title="Checklist" style="font-size:13px; line-height:1;">☑</button>
 </div>
@@ -1610,6 +1611,11 @@ document.getElementById('addNoteBtn').onclick = () => {
         document.execCommand('bold');
         return;
       }
+      if (e.key === 'i' || e.key === 'I') {
+        e.preventDefault();
+        document.execCommand('italic');
+        return;
+      }
       if (e.key === 'u' || e.key === 'U') {
         e.preventDefault();
         document.execCommand('underline');
@@ -1697,6 +1703,7 @@ state.notebooks = state.notebooks.filter(nb => nb.name !== '⚡ Upgrade');
     });
   }
   fmtBtn('fmtBold', 'bold');
+  fmtBtn('fmtItalic', 'italic');
   fmtBtn('fmtUnderline', 'underline');
   document.getElementById('fmtBullet').addEventListener('mousedown', e => {
     e.preventDefault();
