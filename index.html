@@ -1086,6 +1086,8 @@ function renderPanel(nbId, gridEl, titleEl, countEl) {
       const curIdx = arr.indexOf(note);
       if (isEmpty && arr.length > 1 && curIdx < arr.length - 1) {
         snapshotForUndo();
+        // Lock in default titles before reordering
+        arr.forEach((n, i) => { if (!n.title) n.title = 'Note ' + (i + 1); });
         note.text = '';
         note.title = '';
         arr.splice(curIdx, 1);
@@ -1384,13 +1386,15 @@ function renderPanel(nbId, gridEl, titleEl, countEl) {
     card.querySelector('.note-clear-btn').addEventListener('click', e => {
       e.stopPropagation();
       snapshotForUndo();
+      // Lock in default titles before reordering so they stay with each note
+      const arr = state.notes[nb.id];
+      arr.forEach((n, i) => { if (!n.title) n.title = 'Note ' + (i + 1); });
       // Clear DOM first to prevent input handler from re-syncing old content
       ta.innerHTML = '';
       titleInput.value = '';
       note.text = '';
       note.title = '';
       note.tags = [];
-      const arr = state.notes[nb.id];
       const curIdx = arr.indexOf(note);
       if (arr.length > 1 && curIdx < arr.length - 1) {
         arr.splice(curIdx, 1);
