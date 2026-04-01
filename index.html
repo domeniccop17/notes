@@ -1089,7 +1089,7 @@ function renderPanel(nbId, gridEl, titleEl, countEl) {
         // Lock in default titles before reordering
         arr.forEach((n, i) => { if (!n.title) n.title = 'Note ' + (i + 1); });
         note.text = '';
-        note.title = '';
+        // Keep the locked title
         arr.splice(curIdx, 1);
         arr.push(note);
         saveState(); render();
@@ -1393,8 +1393,8 @@ function renderPanel(nbId, gridEl, titleEl, countEl) {
       ta.innerHTML = '';
       titleInput.value = '';
       note.text = '';
-      note.title = '';
       note.tags = [];
+      // Keep the locked title — don't clear it
       const curIdx = arr.indexOf(note);
       if (arr.length > 1 && curIdx < arr.length - 1) {
         arr.splice(curIdx, 1);
@@ -1613,7 +1613,9 @@ document.getElementById('addNotebookBtn').onclick = () => {
 document.getElementById('addNoteBtn').onclick = () => {
   const nb = state.notebooks.find(n=>n.id===state.activeNotebook);
   if (!nb) return;
-  state.notes[nb.id].unshift(makeNote());
+  const n = makeNote();
+  n.title = 'Note ' + (state.notes[nb.id].length + 1);
+  state.notes[nb.id].unshift(n);
   saveState(); renderNotes();
 };
 
