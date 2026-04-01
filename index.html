@@ -539,7 +539,7 @@
     padding: 10px;
     z-index: 100;
     box-shadow: 0 4px 16px rgba(0,0,0,0.08);
-    width: 168px;
+    width: 192px;
   }
 
   .picker-section-label {
@@ -571,8 +571,8 @@
   .color-swatch.selected { border-color: var(--text); }
 
   .symbol-swatch {
-    width: 22px;
-    height: 22px;
+    width: 28px;
+    height: 28px;
     border-radius: 4px;
     cursor: pointer;
     border: 2px solid transparent;
@@ -580,7 +580,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 13px;
+    font-size: 17px;
     line-height: 1;
   }
   .symbol-swatch:hover { transform: scale(1.15); }
@@ -782,8 +782,8 @@ const COLORS = [
 ];
 
 const SYMBOLS = [
-  '●','♪','★','♥','◆','▲','■','☁','⚡','✿',
-  '☀','✦','♠','⬟','◉','☂','✎','⚙','♦','◈'
+  '●','♪','★','♥','◆','▲','■','☁','✿','$',
+  '☀','✦','♠','⬟','◉','✎','⚙','♦','◈','♫'
 ];
 
 const PLACEHOLDERS = [
@@ -1670,6 +1670,14 @@ Promise.all([
       window._activeRec = null; window._activeMicBtn = null;
     }
 
+    // Capture selection before recording starts
+    const sel = window.getSelection();
+    const selAnchorTA = sel && !sel.isCollapsed && sel.anchorNode ? sel.anchorNode.parentElement?.closest('.note-textarea') || (sel.anchorNode.nodeType === 1 && sel.anchorNode.closest('.note-textarea')) : null;
+    const hasSelection = !!(sel && !sel.isCollapsed && selAnchorTA);
+    const savedSelRange = hasSelection ? sel.getRangeAt(0).cloneRange() : null;
+    const selectedText = hasSelection ? sel.toString().trim() : '';
+    const selTA = selAnchorTA;
+
     const rec = new SR();
     rec.continuous = true;
     rec.interimResults = true;
@@ -1698,6 +1706,40 @@ Promise.all([
 
       btn.classList.add('processing');
       snapshotForUndo();
+
+      // ── SELECTION MODE: edit only selected text, no notebook/note creation ──
+      if (savedSelRange && selectedText && selTA) {
+        fetch('https://notes-polish.dcop14c.workers.dev', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text, mode: 'note-edit', noteContent: selectedText }),
+          signal: AbortSignal.timeout(20000),
+        })
+          .then(r => r.ok ? r.json() : Promise.reject())
+          .then(data => {
+            if (data.content) {
+              const s = window.getSelection();
+              s.removeAllRanges();
+              s.addRange(savedSelRange);
+              document.execCommand('insertHTML', false, data.content);
+              // Sync state
+              const noteId = selTA.closest('[data-note-id]')?.dataset.noteId;
+              if (noteId) {
+                for (const nbId of [state.activeNotebook, state.secondaryNotebook]) {
+                  if (!nbId) continue;
+                  const n = state.notes[nbId]?.find(n => n.id === noteId);
+                  if (n) { n.text = selTA.innerHTML; break; }
+                }
+              }
+              debounceSave();
+            }
+          })
+          .catch(() => {})
+          .finally(() => btn.classList.remove('processing'));
+        return;
+      }
+
+      // ── NORMAL SMART MODE ──
       const nbNames = state.notebooks.map(n => n.name);
       const activeNb = state.notebooks.find(n => n.id === state.activeNotebook);
       const activeNotes = (state.notes[state.activeNotebook] || []).map(n => ({
@@ -1729,7 +1771,6 @@ Promise.all([
               target.text = data.content;
               if (data.title) target.title = data.title;
             }
-            // render first (rebuilds DOM from state), then save
             render();
             saveState();
             return;
