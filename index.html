@@ -1077,7 +1077,19 @@ function renderPanel(nbId, gridEl, titleEl, countEl) {
 
     const ta = card.querySelector('.note-textarea');
     ta.innerHTML = note.text;
-    ta.addEventListener('input', () => { note.text = ta.innerHTML; debounceSave(); });
+    ta.addEventListener('input', () => {
+      note.text = ta.innerHTML;
+      debounceSave();
+      // If note becomes empty, move it to end of notebook
+      const isEmpty = !ta.textContent.trim() && !ta.querySelector('img');
+      const arr = state.notes[nb.id];
+      const curIdx = arr.indexOf(note);
+      if (isEmpty && arr.length > 1 && curIdx < arr.length - 1) {
+        arr.splice(curIdx, 1);
+        arr.push(note);
+        saveState(); render();
+      }
+    });
 
     // Backspace in checklist — remove empty item in one press
     ta.addEventListener('keydown', e => {
@@ -1372,16 +1384,13 @@ function renderPanel(nbId, gridEl, titleEl, countEl) {
       note.text = '';
       note.title = '';
       note.tags = [];
-      // If first note is cleared, move it to end of notebook
       const arr = state.notes[nb.id];
-      if (idx === 0 && arr.length > 1) {
-        arr.push(arr.shift());
-        saveState(); render();
-      } else {
-        ta.innerHTML = '';
-        titleInput.value = 'Note ' + (idx + 1);
-        saveState();
+      const curIdx = arr.indexOf(note);
+      if (arr.length > 1 && curIdx < arr.length - 1) {
+        arr.splice(curIdx, 1);
+        arr.push(note);
       }
+      saveState(); render();
     });
 
     card.querySelector('.note-delete-btn').addEventListener('click', e => {
