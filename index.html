@@ -849,31 +849,27 @@ function uid() { return Math.random().toString(36).slice(2,9); }
 })();
 
 // — AUTO-DELETE checked checkboxes after 15 min ——
-const CHECKED_TS_KEY = 'notes_checked_timestamps';
-function getCheckedTimestamps() {
-  try { return JSON.parse(localStorage.getItem(CHECKED_TS_KEY)) || {}; } catch { return {}; }
-}
-function saveCheckedTimestamps(ts) {
-  try { localStorage.setItem(CHECKED_TS_KEY, JSON.stringify(ts)); } catch {}
-}
-// On load: remove items checked 15+ min ago
+// Timestamps stored as data-checked-at attribute directly on each checklist item
+const FIFTEEN_MIN = 15 * 60 * 1000;
 (function autoDeleteChecked() {
-  const ts = getCheckedTimestamps();
   const now = Date.now();
-  const FIFTEEN_MIN = 15 * 60 * 1000;
   let changed = false;
   for (const nbId in state.notes) {
     for (const note of state.notes[nbId]) {
+      if (!note.text.includes('checklist-item')) continue;
       const div = document.createElement('div');
       div.innerHTML = note.text;
-      const items = div.querySelectorAll('.checklist-item.checked');
       let noteChanged = false;
-      items.forEach(item => {
-        const txt = (item.querySelector('span')?.textContent || item.textContent).trim();
-        const key = note.id + ':' + txt;
-        if (ts[key] && (now - ts[key]) >= FIFTEEN_MIN) {
+      div.querySelectorAll('.checklist-item.checked').forEach(item => {
+        const checkedAt = parseInt(item.getAttribute('data-checked-at'), 10);
+        if (checkedAt && (now - checkedAt) >= FIFTEEN_MIN) {
+          // Old enough — delete it
           item.remove();
-          delete ts[key];
+          noteChanged = true;
+          changed = true;
+        } else if (!checkedAt) {
+          // No timestamp (checked before this feature) — stamp it now
+          item.setAttribute('data-checked-at', now);
           noteChanged = true;
           changed = true;
         }
@@ -881,14 +877,9 @@ function saveCheckedTimestamps(ts) {
       if (noteChanged) note.text = div.innerHTML;
     }
   }
-  // Clean up stale timestamps
-  for (const key in ts) {
-    if ((now - ts[key]) >= FIFTEEN_MIN) delete ts[key];
-  }
   if (changed) {
     try { localStorage.setItem('notes_app_v2', JSON.stringify(state)); } catch {}
   }
-  saveCheckedTimestamps(ts);
 })();
 
 // — UNDO / REDO (structural actions only) ——
@@ -1172,19 +1163,18 @@ function renderPanel(nbId, gridEl, titleEl, countEl) {
       debounceSave();
     });
 
-    // checkbox toggle — click checkbox to strike through + track timestamp
+    // checkbox toggle — click checkbox to strike through + stamp timestamp
     ta.addEventListener('change', e => {
       if (e.target.type === 'checkbox') {
         const item = e.target.closest('.checklist-item');
         if (item) {
           item.classList.toggle('checked', e.target.checked);
+          if (e.target.checked) {
+            item.setAttribute('data-checked-at', Date.now());
+          } else {
+            item.removeAttribute('data-checked-at');
+          }
           note.text = ta.innerHTML; debounceSave();
-          // Track checked timestamp for auto-delete
-          const txt = (item.querySelector('span')?.textContent || item.textContent).trim();
-          const key = note.id + ':' + txt;
-          const ts = getCheckedTimestamps();
-          if (e.target.checked) { ts[key] = Date.now(); } else { delete ts[key]; }
-          saveCheckedTimestamps(ts);
         }
       }
     });
