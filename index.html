@@ -1632,12 +1632,24 @@ document.getElementById('addNoteBtn').onclick = () => {
 (function() {
   let spaceHeld = false;
   document.addEventListener('keydown', e => {
-    // Ctrl+Z / Ctrl+Y — structural undo/redo (covers AI edits, checklist organize, etc.)
+    // Ctrl+Z / Ctrl+Y — native first (Word-like), structural fallback (AI actions)
     if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
+      const ce = e.target.closest('[contenteditable]');
+      if (ce) {
+        const before = ce.innerHTML;
+        document.execCommand('undo');
+        if (ce.innerHTML !== before) return; // native undo worked
+      }
       if (undoStack.length) { e.preventDefault(); structuralUndo(); }
       return;
     }
     if ((e.ctrlKey || e.metaKey) && e.key === 'y') {
+      const ce = e.target.closest('[contenteditable]');
+      if (ce) {
+        const before = ce.innerHTML;
+        document.execCommand('redo');
+        if (ce.innerHTML !== before) return; // native redo worked
+      }
       if (redoStack.length) { e.preventDefault(); structuralRedo(); }
       return;
     }
