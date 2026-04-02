@@ -444,6 +444,7 @@
   /* CHECKLIST */
   .note-textarea .checklist-item {
     display: flex; align-items: flex-start; gap: 6px; margin: 2px 0;
+    width: 100%;
   }
   .note-textarea .checklist-item input[type="checkbox"] {
     margin-top: 4px; cursor: pointer; flex-shrink: 0;
@@ -451,6 +452,10 @@
   }
   .note-textarea .checklist-item.checked span {
     text-decoration: line-through; opacity: 0.5;
+  }
+  /* Force checklist items to stack vertically even if wrapped */
+  .note-textarea div:has(> .checklist-item) {
+    display: flex; flex-direction: column;
   }
 
   /* LIST BUTTON (AI organize) */
@@ -882,6 +887,33 @@ const FIFTEEN_MIN = 15 * 60 * 1000;
   }
 })();
 
+// — Normalize AI checklist HTML to match expected structure ——
+function normalizeChecklist(html) {
+  const div = document.createElement('div');
+  div.innerHTML = html;
+  const cbs = div.querySelectorAll('input[type="checkbox"]');
+  if (!cbs.length) return html;
+  // If already correct (.checklist-item with span), return as-is
+  let allCorrect = true;
+  cbs.forEach(cb => {
+    const item = cb.closest('.checklist-item');
+    if (!item || !item.querySelector('span')) allCorrect = false;
+  });
+  if (allCorrect) return html;
+  // Extract text for each checkbox, rebuild in correct format
+  const items = [];
+  cbs.forEach(cb => {
+    const container = cb.closest('.checklist-item') || cb.closest('div, li, p') || cb.parentElement;
+    const clone = container.cloneNode(true);
+    clone.querySelector('input[type="checkbox"]')?.remove();
+    const text = clone.innerHTML.trim() || clone.textContent.trim();
+    items.push(text);
+  });
+  return items.map(text =>
+    `<div class="checklist-item"><input type="checkbox"><span>${text}</span></div>`
+  ).join('');
+}
+
 // — UNDO / REDO (structural actions only) ——
 // Text typing undo is handled natively by the browser (contenteditable).
 // This system only handles: AI edits, delete note, clear note, smart record.
@@ -1251,12 +1283,13 @@ function renderPanel(nbId, gridEl, titleEl, countEl) {
         .then(r => r.ok ? r.json() : Promise.reject())
         .then(data => {
           if (data.content) {
+            const normalized = normalizeChecklist(data.content);
             if (savedRange) {
               sel.removeAllRanges();
               sel.addRange(savedRange);
-              document.execCommand('insertHTML', false, data.content);
+              document.execCommand('insertHTML', false, normalized);
             } else {
-              ta.innerHTML = data.content;
+              ta.innerHTML = normalized;
             }
             note.text = ta.innerHTML;
             debounceSave();
