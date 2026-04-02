@@ -1387,6 +1387,12 @@ function renderPanel(nbId, gridEl, titleEl, countEl) {
       if (e.target.type === 'checkbox') {
         const item = e.target.closest('.checklist-item');
         if (item) {
+          // Ensure text is wrapped in <span> for strikethrough CSS
+          if (!item.querySelector('span')) {
+            const span = document.createElement('span');
+            while (e.target.nextSibling) span.appendChild(e.target.nextSibling);
+            item.appendChild(span);
+          }
           item.classList.toggle('checked', e.target.checked);
           if (e.target.checked) {
             item.setAttribute('data-checked-at', Date.now());
