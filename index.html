@@ -944,7 +944,12 @@ const SYMBOL_CATS = [
     sym: ['◆','■','◈','✦','▲','✧','◉','●','★','❖','◇','△','☆','✶','✸','⬡','⬢','⬟','▣','✎'] },
 ];
 
-function autoSymbol(name) {
+function usedSymbols(excludeId) {
+  return new Set(state.notebooks.filter(n => n.id !== excludeId).map(n => n.symbol).filter(Boolean));
+}
+
+function autoSymbol(name, excludeId) {
+  const taken = usedSymbols(excludeId);
   const lower = name.toLowerCase();
   let best = null, bestLen = 0;
   for (const cat of SYMBOL_CATS) {
@@ -954,7 +959,15 @@ function autoSymbol(name) {
       }
     }
   }
-  return best ? best.sym[0] : '●';
+  if (best) {
+    const free = best.sym.find(s => !taken.has(s));
+    if (free) return free;
+  }
+  // Fallback: first unused default symbol
+  for (const s of DEFAULT_SYMBOLS) {
+    if (!taken.has(s)) return s;
+  }
+  return '●';
 }
 
 const DEFAULT_SYMBOLS = ['●','○','◉','■','◆','◇','▲','△','★','☆','✦','✧','✶','✸','✿','❖','♠','♥','♪','◈'];
@@ -1065,9 +1078,9 @@ let state = loadState() || {
   secondaryNotebook: null
 };
 
-// Auto-assign smart symbols to notebooks missing one
+// Auto-assign smart symbols to notebooks missing one, no duplicates
 state.notebooks.forEach(nb => {
-  if (!nb.symbol || nb.symbol === '●') nb.symbol = autoSymbol(nb.name);
+  if (!nb.symbol || nb.symbol === '●') nb.symbol = autoSymbol(nb.name, nb.id);
 });
 
 function makeNote(text='', tags=[]) {
@@ -2005,7 +2018,7 @@ document.getElementById('addNotebookBtn').onclick = () => {
     const id = uid();
     const usedC = state.notebooks.map(n => n.color);
     const color = COLORS.find(c => !usedC.includes(c)) || COLORS[state.notebooks.length % COLORS.length];
-    state.notebooks.push({ id, name: val, color, symbol: autoSymbol(val) });
+    state.notebooks.push({ id, name: val, color, symbol: autoSymbol(val, id) });
     state.notes[id] = [makeNote()];
     state.activeNotebook = id;
     saveState(); render();
