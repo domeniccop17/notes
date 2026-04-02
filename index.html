@@ -983,6 +983,44 @@ function suggestSymbols(name, count) {
   return result;
 }
 
+// SVG monochrome filter — forces any symbol (including color emoji) to render in a target color
+function ensureMonoFilter(hex) {
+  const id = 'mono-' + hex.replace('#','');
+  if (document.getElementById(id)) return `url(#${id})`;
+  let svg = document.getElementById('mono-filters');
+  if (!svg) {
+    svg = document.createElementNS('http://www.w3.org/2000/svg','svg');
+    svg.id = 'mono-filters';
+    svg.style.cssText = 'position:absolute;width:0;height:0;overflow:hidden';
+    document.body.appendChild(svg);
+  }
+  const r = parseInt(hex.slice(1,3),16)/255;
+  const g = parseInt(hex.slice(3,5),16)/255;
+  const b = parseInt(hex.slice(5,7),16)/255;
+  const f = document.createElementNS('http://www.w3.org/2000/svg','filter');
+  f.id = id;
+  f.setAttribute('color-interpolation-filters','sRGB');
+  const m = document.createElementNS('http://www.w3.org/2000/svg','feColorMatrix');
+  m.setAttribute('type','matrix');
+  m.setAttribute('values',
+    `0 0 0 0 ${r.toFixed(4)} 0 0 0 0 ${g.toFixed(4)} 0 0 0 0 ${b.toFixed(4)} 0 0 0 1 0`);
+  f.appendChild(m);
+  svg.appendChild(f);
+  return `url(#${id})`;
+}
+
+function isColorEmoji(ch) {
+  if (!ch) return false;
+  if (ch.includes('\uFE0F')) return true; // has emoji presentation selector
+  const cp = ch.codePointAt(0);
+  if (cp >= 0x1F000) return true;
+  return [0x2615,0x2693,0x26F0,0x26F1,0x26F5,0x26FA,0x2708].includes(cp);
+}
+
+function dotStyle(sym, color) {
+  return isColorEmoji(sym) ? `filter:${ensureMonoFilter(color)}` : `color:${color}`;
+}
+
 const PLACEHOLDERS = [
   'Start typing', 'Add a note', 'What\'s on your mind?',
   'Write something', 'Jot it down'
@@ -1026,6 +1064,11 @@ let state = loadState() || {
   activeNotebook: 'n1',
   secondaryNotebook: null
 };
+
+// Auto-assign smart symbols to notebooks missing one
+state.notebooks.forEach(nb => {
+  if (!nb.symbol || nb.symbol === '●') nb.symbol = autoSymbol(nb.name);
+});
 
 function makeNote(text='', tags=[]) {
   return { id: uid(), title: '', text, tags };
@@ -1230,7 +1273,7 @@ function renderSidebar() {
     card.dataset.id = todoNb.id;
     card.innerHTML = `
       <div class="todo-fixed-header">
-        <div class="notebook-dot" style="color:${todoNb.color}">${todoNb.symbol || '●'}</div>
+        <div class="notebook-dot" style="${dotStyle(todoNb.symbol || '●', todoNb.color)}">${todoNb.symbol || '●'}</div>
         <span class="todo-fixed-name">${escHtml(todoNb.name)}</span>
         <span class="todo-fixed-count">${p.checked}/${p.total}</span>
       </div>
@@ -1271,7 +1314,7 @@ function renderSidebar() {
       progressBar = `<div class="active-sidebar-bar"><div class="active-sidebar-fill" style="width:${pct}%"></div></div>`;
     }
     div.innerHTML = `
-      <div class="notebook-dot" style="color:${nb.color}">${nb.symbol || '●'}</div>
+      <div class="notebook-dot" style="${dotStyle(nb.symbol || '●', nb.color)}">${nb.symbol || '●'}</div>
       <span class="notebook-name">${escHtml(nb.name)}</span>
       <span class="notebook-count">${countDisplay}</span>
       <button class="nb-split-btn${isSplit ? ' split-active' : ''}" title="Open beside">⊞</button>
@@ -1845,7 +1888,11 @@ function showColorPicker(anchor, nb) {
   syms.forEach(s => {
     const sw = document.createElement('div');
     sw.className = 'symbol-swatch' + (nb.symbol === s ? ' selected' : '');
-    sw.style.color = nb.color;
+    if (isColorEmoji(s)) {
+      sw.style.filter = ensureMonoFilter(nb.color);
+    } else {
+      sw.style.color = nb.color;
+    }
     sw.textContent = s;
     sw.addEventListener('click', e => {
       e.stopPropagation();
