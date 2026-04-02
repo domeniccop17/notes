@@ -940,7 +940,7 @@ function uid() { return Math.random().toString(36).slice(2,9); }
 
 // — AUTO-DELETE checked checkboxes after 15 min ——
 // Timestamps stored as data-checked-at attribute directly on each checklist item
-const FIFTEEN_MIN = 15 * 60 * 1000;
+const AUTO_DELETE_MS = 4 * 60 * 60 * 1000;
 (function autoDeleteChecked() {
   const now = Date.now();
   let changed = false;
@@ -952,7 +952,7 @@ const FIFTEEN_MIN = 15 * 60 * 1000;
       let noteChanged = false;
       div.querySelectorAll('.checklist-item.checked').forEach(item => {
         const checkedAt = parseInt(item.getAttribute('data-checked-at'), 10);
-        if (checkedAt && (now - checkedAt) >= FIFTEEN_MIN) {
+        if (checkedAt && (now - checkedAt) >= AUTO_DELETE_MS) {
           // Old enough — delete it
           item.remove();
           noteChanged = true;
