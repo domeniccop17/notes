@@ -1609,6 +1609,7 @@ function showModal(title, defaultVal, cb) {
   document.getElementById('modalInput').value = defaultVal || '';
   document.getElementById('overlay').classList.remove('hidden');
   document.getElementById('modalInput').focus();
+  document.getElementById('modalInput').select();
   modalCb = cb;
 }
 
