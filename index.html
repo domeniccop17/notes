@@ -897,7 +897,7 @@ const SYMBOL_CATS = [
   { kw: ['travel','trip','flight','vacation','holiday','adventure','explore','tour','destination','airport','passport','backpack'],
     sym: ['▲','✦','★','◆','△','✧','◉','✯','⬟','✶'] },
   { kw: ['food','cook','recipe','meal','restaurant','eat','kitchen','bake','grocery','diet','lunch','dinner','breakfast'],
-    sym: ['✿','❀','✾','❁','❃','☘','✽','✼','❋','✻'] },
+    sym: ['✿','❀','✾','❁','❃','✽','✼','❋','✻','◉'] },
   { kw: ['code','dev','program','software','tech','api','debug','build','deploy','server','database','web','app','frontend','backend','git','python','react'],
     sym: ['◈','⬡','✧','◉','⊛','⊕','■','▣','✦','⬢'] },
   { kw: ['school','study','class','course','lecture','exam','homework','university','college','learn','education','student','teacher','math','science'],
@@ -909,13 +909,13 @@ const SYMBOL_CATS = [
   { kw: ['home','house','apartment','room','furniture','decor','clean','bedroom','living','garden','yard','rent','interior'],
     sym: ['⬟','⬡','⬢','◆','■','◇','▣','△','✦','✧'] },
   { kw: ['health','fitness','gym','workout','exercise','run','yoga','medical','doctor','hospital','wellness','body','weight','muscle'],
-    sym: ['♥','✚','✛','✜','❤','❥','✦','★','◉','●'] },
+    sym: ['♥','✚','✛','✜','✢','❥','✦','★','◉','●'] },
   { kw: ['art','design','creative','draw','paint','graphic','visual','style','fashion','photo','camera','film','video','animation','sketch'],
     sym: ['✦','✧','✶','✷','✹','❋','✸','✺','✻','✼'] },
   { kw: ['love','heart','relationship','date','dating','wedding','romance','valentine','couple','marriage','partner'],
-    sym: ['♥','❤','❥','❦','❧','❣','✦','★','✧','●'] },
+    sym: ['♥','❥','❦','❧','❣','✦','★','✧','●','◉'] },
   { kw: ['nature','plant','garden','flower','tree','forest','green','outdoor','hike','mountain','lake','river','ocean','beach','sea','water','environment'],
-    sym: ['✿','❀','❁','❃','☘','✾','❋','✽','✼','❂'] },
+    sym: ['✿','❀','❁','❃','✾','❋','✽','✼','❂','◉'] },
   { kw: ['book','read','write','journal','diary','blog','story','novel','author','library','literature','poem','chapter','publish','note'],
     sym: ['✎','✏','✐','✑','✒','❖','✦','◆','✧','◈'] },
   { kw: ['shop','store','buy','sell','market','product','retail','brand','commerce','order','deal','sale','purchase','delivery'],
@@ -923,13 +923,13 @@ const SYMBOL_CATS = [
   { kw: ['car','drive','vehicle','auto','road','transport','bike','motorcycle','truck','electric','gas','mechanic','engine'],
     sym: ['◆','▲','►','■','●','✦','◉','★','△','◈'] },
   { kw: ['pet','dog','cat','animal','fish','bird','puppy','kitten','vet','aquarium','hamster','rabbit','turtle','zoo'],
-    sym: ['◉','●','✿','❀','✾','☘','✦','★','✧','❋'] },
+    sym: ['◉','●','✿','❀','✾','❁','✦','★','✧','❋'] },
   { kw: ['space','star','moon','planet','universe','galaxy','astronaut','rocket','orbit','cosmos','astronomy'],
     sym: ['★','☆','✦','✧','✯','✰','✶','✷','✸','✹'] },
   { kw: ['idea','think','brain','innovation','startup','launch','create','invent','spark','inspire','concept','strategy','vision','goal','dream'],
     sym: ['✦','✧','★','☆','✯','✰','✶','❖','◈','✸'] },
-  { kw: ['todo','task','checklist','organize','schedule','calendar','agenda','reminder','priority','progress'],
-    sym: ['✓','✔','◉','■','★','✦','●','◆','✧','❖'] },
+  { kw: ['todo','to do','task','checklist','organize','schedule','calendar','agenda','reminder','priority','progress'],
+    sym: ['✓','☐','◉','■','★','✦','●','◆','✧','❖'] },
   { kw: ['cloud','hosting','aws','azure','saas','infrastructure','network','backup','storage','kubernetes','docker'],
     sym: ['◈','⬡','◉','✧','⊛','⊕','■','✦','⬢','◆'] },
   { kw: ['movie','film','cinema','watch','show','series','netflix','tv','documentary','anime','cartoon','episode'],
@@ -955,9 +955,12 @@ function autoSymbol(name) {
   return best ? best.sym[0] : '●';
 }
 
+const DEFAULT_SYMBOLS = ['●','○','◉','■','◆','◇','▲','△','★','☆','✦','✧','✶','✸','✿','❖','♠','♥','♪','◈'];
+
 function suggestSymbols(name, count) {
+  const n = count || 20;
   const lower = name.toLowerCase();
-  // Score each category by number of keyword matches and longest match
+  // Score each category by keyword matches
   const scored = SYMBOL_CATS.map(cat => {
     let score = 0, longest = 0;
     for (const kw of cat.kw) {
@@ -965,12 +968,15 @@ function suggestSymbols(name, count) {
     }
     return { cat, score, longest };
   }).filter(s => s.score > 0).sort((a, b) => b.longest - a.longest || b.score - a.score);
-  // Collect symbols from top categories, no duplicates
+  // Collect from matched categories, then pad with defaults
   const result = [];
   for (const { cat } of scored) {
     for (const s of cat.sym) {
-      if (!result.includes(s) && result.length < (count || 10)) result.push(s);
+      if (!result.includes(s) && result.length < n) result.push(s);
     }
+  }
+  for (const s of DEFAULT_SYMBOLS) {
+    if (!result.includes(s) && result.length < n) result.push(s);
   }
   return result;
 }
