@@ -1037,6 +1037,7 @@ function renderPanel(nbId, gridEl, titleEl, countEl) {
   titleEl.style.cursor = 'pointer';
   titleEl.title = 'Click to rename';
   titleEl.onclick = () => {
+    if (titleEl.querySelector('input')) return; // already editing
     const input = document.createElement('input');
     input.value = nb.name;
     input.style.cssText = 'font:inherit;color:inherit;background:transparent;border:none;border-bottom:1px solid var(--muted);outline:none;width:' + Math.max(80, nb.name.length * 10) + 'px;padding:0;';
