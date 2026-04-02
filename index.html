@@ -147,27 +147,81 @@
   .notebook-item:hover .nb-split-btn { opacity: 1; }
   .nb-split-btn.split-active { opacity: 1; color: var(--accent); }
 
-  /* TO DO notebook distinction */
-  .notebook-item.todo-notebook {
+  /* Fixed TO DO card at top of sidebar */
+  .todo-fixed-card {
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 12px;
+    margin: 0 4px 0;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .todo-fixed-card:hover {
+    border-color: var(--muted);
+    background: var(--surface);
+  }
+  .todo-fixed-card.active {
+    border-color: var(--accent);
+    background: var(--tag-bg);
+  }
+  .todo-fixed-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--text);
+    user-select: none;
+  }
+  .todo-fixed-name {
+    font-weight: 600;
+    flex: 1;
+  }
+  .todo-fixed-count {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+  }
+  .todo-fixed-bar {
+    height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    margin-top: 8px;
+    overflow: hidden;
+  }
+  .todo-fixed-fill {
+    height: 100%;
+    border-radius: 2px;
+    transition: width 0.3s ease;
+  }
+  .todo-separator {
+    height: 1px;
+    background: var(--border);
+    margin: 8px 8px 4px;
+  }
+
+  /* Active notebook tracking (right-click toggle) */
+  .notebook-item.active-notebook {
     border-left: 3px solid var(--accent);
     padding-left: 7px;
     flex-wrap: wrap;
   }
-  .notebook-item.todo-notebook .todo-sidebar-bar {
+  .notebook-item.active-notebook .active-sidebar-bar {
     width: 100%; height: 3px; background: var(--border);
     border-radius: 2px; overflow: hidden; margin-top: 2px;
   }
-  .notebook-item.todo-notebook .todo-sidebar-fill {
+  .notebook-item.active-notebook .active-sidebar-fill {
     height: 100%; background: var(--accent); border-radius: 2px;
     transition: width 0.3s ease;
   }
-  .notebook-item.todo-notebook .notebook-count {
+  .notebook-item.active-notebook .notebook-count {
     font-size: 10px;
     background: rgba(124,77,255,0.12);
     padding: 1px 5px;
     border-radius: 8px;
     min-width: auto;
   }
+
+  /* Progress bar in panel header (for TODO + active notebooks) */
   .todo-header-bar {
     width: 100%; height: 4px; background: var(--border);
     border-radius: 2px; overflow: hidden; margin-top: 4px;
@@ -1051,24 +1105,60 @@ function getTodoProgress(nbId) {
 }
 
 // — RENDER SIDEBAR ————————————————————————
+function isTodoNotebook(nb) {
+  return nb.name.toLowerCase().replace(/\s+/g, '') === 'todo';
+}
+
 function renderSidebar() {
   const list = document.getElementById('notebookList');
   list.innerHTML = '';
   let nbDragSrcId = null;
-  state.notebooks.forEach(nb => {
+
+  // Find and render fixed TODO card at top
+  const todoNb = state.notebooks.find(isTodoNotebook);
+  if (todoNb) {
+    const p = getTodoProgress(todoNb.id);
+    const pct = p.total ? Math.round((p.checked / p.total) * 100) : 0;
+    const card = document.createElement('div');
+    card.className = 'todo-fixed-card' + (todoNb.id === state.activeNotebook ? ' active' : '');
+    card.dataset.id = todoNb.id;
+    card.innerHTML = `
+      <div class="todo-fixed-header">
+        <div class="notebook-dot" style="color:${todoNb.color}">${todoNb.symbol || '●'}</div>
+        <span class="todo-fixed-name">${escHtml(todoNb.name)}</span>
+        <span class="todo-fixed-count">${p.checked}/${p.total}</span>
+      </div>
+      <div class="todo-fixed-bar">
+        <div class="todo-fixed-fill" style="width:${pct}%;background:${todoNb.color || 'var(--accent)'}"></div>
+      </div>
+    `;
+    card.addEventListener('click', e => {
+      if (e.target.closest('.notebook-dot')) { showColorPicker(e.target.closest('.notebook-dot'), todoNb); return; }
+      state.activeNotebook = todoNb.id; state.activeNote = 0; saveState(); render();
+    });
+    card.addEventListener('contextmenu', e => { e.preventDefault(); showNotebookCtx(e, todoNb); });
+    list.appendChild(card);
+
+    const sep = document.createElement('div');
+    sep.className = 'todo-separator';
+    list.appendChild(sep);
+  }
+
+  // Render remaining notebooks (skip TODO)
+  state.notebooks.filter(nb => !isTodoNotebook(nb)).forEach(nb => {
     const div = document.createElement('div');
-    div.className = 'notebook-item' + (nb.id === state.activeNotebook ? ' active' : '') + (nb.todo ? ' todo-notebook' : '');
+    div.className = 'notebook-item' + (nb.id === state.activeNotebook ? ' active' : '') + (nb.active ? ' active-notebook' : '');
     div.draggable = true;
     div.dataset.id = nb.id;
     const count = (state.notes[nb.id] || []).filter(n=>n.text.trim()).length;
     const isSplit = nb.id === state.secondaryNotebook;
     let countDisplay = `${count}`;
     let progressBar = '';
-    if (nb.todo) {
+    if (nb.active) {
       const p = getTodoProgress(nb.id);
       countDisplay = p.total ? `${p.checked}/${p.total}` : `${count}`;
       const pct = p.total ? Math.round((p.checked / p.total) * 100) : 0;
-      progressBar = `<div class="todo-sidebar-bar"><div class="todo-sidebar-fill" style="width:${pct}%"></div></div>`;
+      progressBar = `<div class="active-sidebar-bar"><div class="active-sidebar-fill" style="width:${pct}%"></div></div>`;
     }
     div.innerHTML = `
       <div class="notebook-dot" style="color:${nb.color}">${nb.symbol || '●'}</div>
@@ -1150,8 +1240,8 @@ function renderPanel(nbId, gridEl, titleEl, countEl) {
   };
 
   const notes = state.notes[nb.id] || [];
-  // Show progress info for TODO notebooks, entries count for normal ones
-  if (nb.todo) {
+  // Show progress info for TODO / active notebooks, entries count for others
+  if (isTodoNotebook(nb) || nb.active) {
     const p = getTodoProgress(nb.id);
     const pct = p.total ? Math.round((p.checked / p.total) * 100) : 0;
     const color = nb.color || 'var(--accent)';
@@ -1654,10 +1744,11 @@ function showColorPicker(anchor, nb) {
 // — CONTEXT MENUS —————————————————————————
 function showNotebookCtx(e, nb) {
   const menu = document.getElementById('ctxMenu');
-  const todoLabel = nb.todo ? 'Unmark TO DO' : 'Mark as TO DO';
+  const isTodo = isTodoNotebook(nb);
+  const activeLabel = nb.active ? 'Deactivate' : 'Activate';
   menu.innerHTML = `
     <div class="ctx-item" id="ctx-rename">Rename</div>
-    <div class="ctx-item" id="ctx-toggle-todo">${todoLabel}</div>
+    ${!isTodo ? `<div class="ctx-item" id="ctx-toggle-active">${activeLabel}</div>` : ''}
     <div class="ctx-item danger" id="ctx-delete-nb">Delete notebook</div>
   `;
   posCtx(menu, e.clientX, e.clientY);
@@ -1669,11 +1760,13 @@ function showNotebookCtx(e, nb) {
     });
   };
 
-  document.getElementById('ctx-toggle-todo').onclick = () => {
-    hideCtx();
-    nb.todo = !nb.todo;
-    saveState(); render();
-  };
+  if (!isTodo) {
+    document.getElementById('ctx-toggle-active').onclick = () => {
+      hideCtx();
+      nb.active = !nb.active;
+      saveState(); render();
+    };
+  }
 
   document.getElementById('ctx-delete-nb').onclick = () => {
     hideCtx();
