@@ -702,6 +702,16 @@
 
   .ctx-item:hover { background: var(--surface); }
   .ctx-item.danger { color: var(--danger); }
+  .ctx-symbol-row {
+    display: flex; flex-wrap: wrap; gap: 2px; padding: 4px 6px;
+  }
+  .ctx-symbol-btn {
+    width: 28px; height: 28px; display: flex; align-items: center;
+    justify-content: center; border: none; background: none;
+    border-radius: 5px; cursor: pointer; font-size: 15px;
+    transition: background 0.1s;
+  }
+  .ctx-symbol-btn:hover { background: var(--surface); }
 
   /* MODAL */
   .overlay {
@@ -878,40 +888,97 @@ const SYMBOLS = [
   '☀','✦','♠','⬟','◉','✎','⚙','♦','◈','♫'
 ];
 
-// Auto-pick symbol based on notebook name
-const SYMBOL_KEYWORDS = {
-  '♪': ['music','song','audio','sound','band','playlist','beat','dj','radio','spotify'],
-  '♫': ['concert','album','instrument','piano','guitar','drum'],
-  '$': ['money','finance','budget','bank','invest','pay','cost','price','profit','sales','tax','crypto','stock','trading','revenue','expense'],
-  '♥': ['love','heart','health','care','relationship','date','wedding','family','friend','wellness'],
-  '☁': ['cloud','weather','server','hosting','deploy','aws','azure','dream'],
-  '☀': ['sun','summer','morning','day','bright','energy','solar','light','vacation'],
-  '✿': ['flower','garden','plant','nature','green','grow','organic','farm'],
-  '✎': ['write','note','blog','journal','diary','draft','essay','story','book','read','study','school','homework','exam','class','course','lecture'],
-  '⚙': ['setting','config','dev','code','tech','tool','build','engine','system','api','software','hardware','setup','fix','debug'],
-  '★': ['star','favorite','best','top','goal','wish','review','rate','import','vip','premium'],
-  '▲': ['mountain','travel','hike','adventure','trip','explore','camp','outdoor'],
-  '■': ['work','project','task','todo','plan','board','sprint','job','business','office','meeting','team'],
-  '♠': ['game','play','poker','card','casino','bet','sport','competition','chess'],
-  '◆': ['design','art','creative','draw','paint','ui','ux','graphic','visual','style','fashion'],
-  '◉': ['target','focus','aim','track','monitor','watch','eye','analyze','data','metric','stat'],
-  '✦': ['idea','spark','magic','special','new','launch','startup','innovation','inspire'],
-  '⬟': ['home','house','room','kitchen','clean','furniture','decor','apartment','rent'],
-  '◈': ['gem','diamond','premium','luxury','jewelry','value','treasure','collect'],
-  '♦': ['shop','store','buy','sell','market','product','retail','brand','commerce','order'],
-};
+// Smart symbol categories — emoji matched by notebook name
+const SYMBOL_CATS = [
+  { kw: ['music','song','audio','sound','band','playlist','beat','dj','radio','concert','album','instrument','piano','guitar','drum','vinyl','rap','jazz','rock','spotify'],
+    sym: ['🎵','🎶','🎸','🎹','🎤','🎧','🎼','🎺','🥁','🎻'] },
+  { kw: ['money','finance','budget','bank','invest','pay','cost','price','profit','sales','tax','crypto','stock','trading','revenue','expense','wallet','fund','loan','saving'],
+    sym: ['💰','💵','📊','💲','🏦','💳','📈','🧮','💹','🪙'] },
+  { kw: ['travel','trip','flight','vacation','holiday','adventure','explore','tour','destination','airport','passport','backpack'],
+    sym: ['✈️','🌍','🗺️','🧳','🏖️','⛰️','🚀','🛫','🏝️','🧭'] },
+  { kw: ['food','cook','recipe','meal','restaurant','eat','kitchen','bake','grocery','diet','lunch','dinner','breakfast'],
+    sym: ['🍽️','🍳','👨‍🍳','🥗','🍕','🍔','🍰','🥘','🍜','🍎'] },
+  { kw: ['code','dev','program','software','tech','api','debug','build','deploy','server','database','web','app','frontend','backend','git','python','react'],
+    sym: ['💻','⚙️','🖥️','🔧','📱','🌐','🛠️','🔌','📡','🤖'] },
+  { kw: ['school','study','class','course','lecture','exam','homework','university','college','learn','education','student','teacher','math','science'],
+    sym: ['📚','✏️','🎓','📖','📝','🏫','🧪','📐','🔬','✍️'] },
+  { kw: ['work','job','office','business','meeting','project','team','career','company','corporate','professional','client','deadline','report'],
+    sym: ['💼','🏢','📋','📎','🗂️','📊','👔','📌','🗃️','📁'] },
+  { kw: ['game','gaming','xbox','playstation','nintendo','steam','esport','level','quest','rpg','fps','console','controller'],
+    sym: ['🎮','🕹️','🏆','🎲','♟️','🃏','🎯','🎰','👾','⚔️'] },
+  { kw: ['home','house','apartment','room','furniture','decor','clean','bedroom','living','garden','yard','rent','interior'],
+    sym: ['🏠','🏡','🛋️','🔑','🪴','🛏️','🚪','🏘️','🧹','💡'] },
+  { kw: ['health','fitness','gym','workout','exercise','run','yoga','medical','doctor','hospital','wellness','body','weight','muscle'],
+    sym: ['💪','🏃','🧘','❤️','🏥','💊','🫀','🥗','🏋️','🧠'] },
+  { kw: ['art','design','creative','draw','paint','graphic','visual','style','fashion','photo','camera','film','video','animation','sketch'],
+    sym: ['🎨','🖌️','📸','🎬','✨','🖼️','📷','🎭','✍️','🎞️'] },
+  { kw: ['love','heart','relationship','date','dating','wedding','romance','valentine','couple','marriage','partner'],
+    sym: ['❤️','💕','💖','💍','🌹','💝','💑','💘','💗','💞'] },
+  { kw: ['nature','plant','garden','flower','tree','forest','green','outdoor','hike','mountain','lake','river','ocean','beach','sea','water','environment'],
+    sym: ['🌿','🌳','🌺','🏔️','🌊','🌸','🍃','🏞️','🌻','☘️'] },
+  { kw: ['book','read','write','journal','diary','blog','story','novel','author','library','literature','poem','chapter','publish','note'],
+    sym: ['📖','📕','✍️','📓','📔','📚','🔖','📃','📘','📙'] },
+  { kw: ['shop','store','buy','sell','market','product','retail','brand','commerce','order','deal','sale','purchase','delivery'],
+    sym: ['🛒','🛍️','📦','🏪','💳','🏷️','🎁','🤝','💰','📬'] },
+  { kw: ['car','drive','vehicle','auto','road','transport','bike','motorcycle','truck','electric','gas','mechanic','engine'],
+    sym: ['🚗','🚙','🏎️','🚕','🛞','⛽','🏍️','🚲','🚁','🔧'] },
+  { kw: ['pet','dog','cat','animal','fish','bird','puppy','kitten','vet','aquarium','hamster','rabbit','turtle','zoo'],
+    sym: ['🐾','🐕','🐈','🐟','🐦','🐢','🐰','🦎','🐠','🦜'] },
+  { kw: ['space','star','moon','planet','universe','galaxy','astronaut','rocket','orbit','cosmos','astronomy'],
+    sym: ['🚀','⭐','🌙','🪐','🌌','🛸','☄️','🔭','🌟','✨'] },
+  { kw: ['idea','think','brain','innovation','startup','launch','create','invent','spark','inspire','concept','strategy','vision','goal','dream'],
+    sym: ['💡','🧠','🚀','✨','🎯','💭','🌟','⚡','🔮','🏹'] },
+  { kw: ['todo','task','checklist','organize','schedule','calendar','agenda','reminder','priority','progress'],
+    sym: ['✅','📋','📝','🗓️','⏰','📌','🎯','☑️','📅','🔔'] },
+  { kw: ['cloud','hosting','aws','azure','saas','infrastructure','network','backup','storage','kubernetes','docker'],
+    sym: ['☁️','🌐','🖥️','📡','🔌','💾','🛡️','🔒','📶','⚡'] },
+  { kw: ['movie','film','cinema','watch','show','series','netflix','tv','documentary','anime','cartoon','episode'],
+    sym: ['🎬','🍿','📺','🎥','🎞️','📽️','🎭','🎪','📡','🔮'] },
+  { kw: ['sport','football','soccer','basketball','baseball','tennis','hockey','swim','golf','boxing','athletic'],
+    sym: ['⚽','🏀','🏈','⚾','🎾','🏐','🏒','🏊','⛳','🥊'] },
+  { kw: ['party','celebrate','birthday','event','festival','fun','dance','club','bar','drink','beer','wine','cocktail'],
+    sym: ['🎉','🎊','🥳','🎂','🍻','🍷','🎈','🪩','💃','🥂'] },
+  { kw: ['security','lock','password','safe','protect','privacy','hack','cyber','defense'],
+    sym: ['🔒','🛡️','🔐','🗝️','🔑','⚠️','🚨','👁️','🔏','🦺'] },
+  { kw: ['baby','child','kid','parent','mom','dad','family','pregnant','toddler'],
+    sym: ['👶','👨‍👩‍👧','🍼','🧸','👪','🎀','🧒','🤰','👨‍👧','❤️'] },
+  { kw: ['sleep','night','rest','bed','relax','calm','meditation','peace','quiet'],
+    sym: ['😴','🌙','💤','🛏️','🌃','✨','🧘','🕯️','☮️','🌌'] },
+  { kw: ['weather','rain','snow','storm','wind','cold','hot','temperature','climate','sunny'],
+    sym: ['🌤️','🌧️','❄️','⛈️','🌈','🌡️','☔','💨','🌪️','☀️'] },
+];
 
 function autoSymbol(name) {
   const lower = name.toLowerCase();
-  let best = null, bestScore = 0;
-  for (const [sym, keywords] of Object.entries(SYMBOL_KEYWORDS)) {
-    for (const kw of keywords) {
-      if (lower.includes(kw) && kw.length > bestScore) {
-        best = sym; bestScore = kw.length;
+  let best = null, bestLen = 0;
+  for (const cat of SYMBOL_CATS) {
+    for (const kw of cat.kw) {
+      if (lower.includes(kw) && kw.length > bestLen) {
+        best = cat; bestLen = kw.length;
       }
     }
   }
-  return best || '●';
+  return best ? best.sym[0] : '●';
+}
+
+function suggestSymbols(name, count) {
+  const lower = name.toLowerCase();
+  // Score each category by number of keyword matches and longest match
+  const scored = SYMBOL_CATS.map(cat => {
+    let score = 0, longest = 0;
+    for (const kw of cat.kw) {
+      if (lower.includes(kw)) { score += kw.length; if (kw.length > longest) longest = kw.length; }
+    }
+    return { cat, score, longest };
+  }).filter(s => s.score > 0).sort((a, b) => b.longest - a.longest || b.score - a.score);
+  // Collect symbols from top categories, no duplicates
+  const result = [];
+  for (const { cat } of scored) {
+    for (const s of cat.sym) {
+      if (!result.includes(s) && result.length < (count || 10)) result.push(s);
+    }
+  }
+  return result;
 }
 
 const PLACEHOLDERS = [
@@ -1797,12 +1864,25 @@ function showNotebookCtx(e, nb) {
   const menu = document.getElementById('ctxMenu');
   const isTodo = isTodoNotebook(nb);
   const activeLabel = nb.active ? 'Deactivate' : 'Activate';
+  const suggestions = suggestSymbols(nb.name, 10);
+  const symRow = suggestions.length
+    ? `<div class="ctx-symbol-row">${suggestions.map(s => `<button class="ctx-symbol-btn" data-sym="${s}">${s}</button>`).join('')}</div>`
+    : '';
   menu.innerHTML = `
+    ${symRow}
     <div class="ctx-item" id="ctx-rename">Rename</div>
     ${!isTodo ? `<div class="ctx-item" id="ctx-toggle-active">${activeLabel}</div>` : ''}
     <div class="ctx-item danger" id="ctx-delete-nb">Delete notebook</div>
   `;
   posCtx(menu, e.clientX, e.clientY);
+
+  menu.querySelectorAll('.ctx-symbol-btn').forEach(btn => {
+    btn.onclick = () => {
+      hideCtx();
+      nb.symbol = btn.dataset.sym;
+      saveState(); render();
+    };
+  });
 
   document.getElementById('ctx-rename').onclick = () => {
     hideCtx();
