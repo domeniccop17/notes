@@ -194,9 +194,10 @@
     transition: width 0.3s ease;
   }
   .todo-separator {
-    height: 1px;
-    background: var(--border);
-    margin: 8px 8px 4px;
+    height: 0;
+    border-top: 1.5px solid var(--muted);
+    margin: 10px 6px 8px;
+    opacity: 0.35;
   }
 
   /* Active notebook tracking (right-click toggle) */
@@ -1144,8 +1145,12 @@ function renderSidebar() {
     list.appendChild(sep);
   }
 
-  // Render remaining notebooks (skip TODO)
-  state.notebooks.filter(nb => !isTodoNotebook(nb)).forEach(nb => {
+  // Split remaining into activated (sorted by activation order) and regular
+  const rest = state.notebooks.filter(nb => !isTodoNotebook(nb));
+  const activated = rest.filter(nb => nb.active).sort((a, b) => (a.activatedAt || 0) - (b.activatedAt || 0));
+  const regular = rest.filter(nb => !nb.active);
+
+  function renderNbItem(nb) {
     const div = document.createElement('div');
     div.className = 'notebook-item' + (nb.id === state.activeNotebook ? ' active' : '') + (nb.active ? ' active-notebook' : '');
     div.draggable = true;
@@ -1202,7 +1207,20 @@ function renderSidebar() {
     });
 
     list.appendChild(div);
-  });
+  }
+
+  // Render activated notebooks first
+  activated.forEach(renderNbItem);
+
+  // Separator between activated and regular (only if both groups exist)
+  if (activated.length > 0 && regular.length > 0) {
+    const sep2 = document.createElement('div');
+    sep2.className = 'todo-separator';
+    list.appendChild(sep2);
+  }
+
+  // Render regular notebooks
+  regular.forEach(renderNbItem);
 }
 
 // — RENDER NOTES GRID —————————————————————
@@ -1770,6 +1788,7 @@ function showNotebookCtx(e, nb) {
     document.getElementById('ctx-toggle-active').onclick = () => {
       hideCtx();
       nb.active = !nb.active;
+      nb.activatedAt = nb.active ? Date.now() : 0;
       saveState(); render();
     };
   }
