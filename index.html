@@ -1546,6 +1546,28 @@ function renderPanel(nbId, gridEl, titleEl, countEl) {
       if (!item && !hasChecklist) return; // no checklist, let default Enter work
 
       e.preventDefault();
+
+      // Double-enter on empty item → exit checklist mode
+      if (item) {
+        const span = item.querySelector('span');
+        const text = span ? span.textContent.replace(/\u200B/g, '').trim() : '';
+        if (text === '') {
+          // Remove the empty checklist item and insert a normal line
+          const normalLine = document.createElement('div');
+          normalLine.innerHTML = '<br>';
+          item.after(normalLine);
+          item.remove();
+          const range = document.createRange();
+          range.setStart(normalLine, 0);
+          range.collapse(true);
+          sel.removeAllRanges();
+          sel.addRange(range);
+          note.text = ta.innerHTML;
+          debounceSave();
+          return;
+        }
+      }
+
       const newItem = document.createElement('div');
       newItem.className = 'checklist-item';
       newItem.innerHTML = '<input type="checkbox"><span>\u200B</span>';
@@ -1561,9 +1583,9 @@ function renderPanel(nbId, gridEl, titleEl, countEl) {
       }
 
       // place cursor in the new span
-      const span = newItem.querySelector('span');
+      const newSpan = newItem.querySelector('span');
       const range = document.createRange();
-      range.setStart(span, 0);
+      range.setStart(newSpan, 0);
       range.collapse(true);
       sel.removeAllRanges();
       sel.addRange(range);
