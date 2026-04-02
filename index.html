@@ -1044,6 +1044,10 @@ function renderPanel(nbId, gridEl, titleEl, countEl) {
     titleEl.appendChild(input);
     input.focus();
     input.select();
+    let _nbTitleSelected = true;
+    input.addEventListener('mouseup', e => {
+      if (_nbTitleSelected) { e.preventDefault(); _nbTitleSelected = false; }
+    });
     const save = () => {
       const val = input.value.trim();
       if (val && val !== nb.name) { nb.name = val; saveState(); }
@@ -1088,6 +1092,12 @@ function renderPanel(nbId, gridEl, titleEl, countEl) {
 
     const titleInput = card.querySelector('.note-title');
     titleInput.addEventListener('input', () => { note.title = titleInput.value; debounceSave(); });
+    // First click selects all, second click places cursor
+    let _titleSelected = false;
+    titleInput.addEventListener('focus', () => { titleInput.select(); _titleSelected = true; });
+    titleInput.addEventListener('mouseup', e => {
+      if (_titleSelected) { e.preventDefault(); _titleSelected = false; }
+    });
 
     const ta = card.querySelector('.note-textarea');
     ta.innerHTML = note.text;
