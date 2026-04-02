@@ -851,12 +851,28 @@ function uid() { return Math.random().toString(36).slice(2,9); }
 // — AUTO-DELETE checked checkboxes after 15 min ——
 // Timestamps stored as data-checked-at attribute directly on each checklist item
 const FIFTEEN_MIN = 15 * 60 * 1000;
-// Store pre-delete state so undo can restore after init
-let _preDeleteState = null;
 (function autoDeleteChecked() {
   const now = Date.now();
+  let willDelete = false;
+  // First pass: check if any deletions will happen
+  for (const nbId in state.notes) {
+    for (const note of state.notes[nbId]) {
+      if (!note.text.includes('data-checked-at')) continue;
+      const div = document.createElement('div');
+      div.innerHTML = note.text;
+      div.querySelectorAll('.checklist-item[data-checked-at]').forEach(item => {
+        const checkedAt = parseInt(item.getAttribute('data-checked-at'), 10);
+        if (checkedAt && (now - checkedAt) >= FIFTEEN_MIN) willDelete = true;
+      });
+    }
+  }
+  // Snapshot before deleting so Ctrl+Z can restore
+  if (willDelete) {
+    undoStack.push(JSON.stringify(state));
+    if (undoStack.length > MAX_UNDO) undoStack.shift();
+  }
+  // Second pass: stamp unstamped + delete old
   let changed = false;
-  let deleted = false;
   for (const nbId in state.notes) {
     for (const note of state.notes[nbId]) {
       if (!note.text.includes('checklist-item')) continue;
@@ -866,11 +882,9 @@ let _preDeleteState = null;
       div.querySelectorAll('.checklist-item.checked').forEach(item => {
         const checkedAt = parseInt(item.getAttribute('data-checked-at'), 10);
         if (checkedAt && (now - checkedAt) >= FIFTEEN_MIN) {
-          if (!deleted) _preDeleteState = JSON.stringify(state);
           item.remove();
           noteChanged = true;
           changed = true;
-          deleted = true;
         } else if (!checkedAt) {
           item.setAttribute('data-checked-at', now);
           noteChanged = true;
@@ -891,8 +905,6 @@ let _preDeleteState = null;
 const undoStack = [];
 const redoStack = [];
 const MAX_UNDO = 200;
-// Push pre-delete state if auto-delete removed checked items
-if (_preDeleteState) { undoStack.push(_preDeleteState); _preDeleteState = null; }
 
 function snapshotForUndo() {
   // sync DOM → state
