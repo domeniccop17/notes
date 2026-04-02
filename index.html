@@ -1415,9 +1415,10 @@ function renderPanel(nbId, gridEl, titleEl, countEl) {
     input.addEventListener('mouseup', e => {
       if (_nbTitleSelected) { e.preventDefault(); _nbTitleSelected = false; }
     });
+    const _oldNbName = nb.name;
     const save = () => {
       const val = input.value.trim();
-      if (val && val !== nb.name) { nb.name = val; saveState(); }
+      if (val && val !== _oldNbName) { snapshotForUndo(); nb.name = val; saveState(); }
       render();
     };
     input.addEventListener('blur', save);
@@ -1470,7 +1471,7 @@ function renderPanel(nbId, gridEl, titleEl, countEl) {
     titleInput.addEventListener('input', () => { note.title = titleInput.value; debounceSave(); });
     // First click selects all, second click places cursor
     let _titleSelected = false;
-    titleInput.addEventListener('focus', () => { titleInput.select(); _titleSelected = true; });
+    titleInput.addEventListener('focus', () => { snapshotForUndo(); titleInput.select(); _titleSelected = true; });
     titleInput.addEventListener('mouseup', e => {
       if (_titleSelected) { e.preventDefault(); _titleSelected = false; }
     });
@@ -1957,7 +1958,7 @@ function showNotebookCtx(e, nb) {
   document.getElementById('ctx-rename').onclick = () => {
     hideCtx();
     showModal('Rename Notebook', nb.name, val => {
-      if (val) { nb.name = val; saveState(); render(); }
+      if (val && val !== nb.name) { snapshotForUndo(); nb.name = val; saveState(); render(); }
     });
   };
 
