@@ -2342,6 +2342,79 @@ Promise.all([
         return;
       }
 
+      // ── CHECKLIST TOGGLE: handle "done/check/complete/paid/finished/remove" commands locally ──
+      const checklistAction = (() => {
+        const lower = text.toLowerCase();
+        // Detect intent: checking off a task
+        const isCheck = /(?:i(?:'?ve)?|already|just)\s+(?:done|did|paid|finished|completed|ordered|sent|called|booked|bought|fixed|cleaned|submitted|applied|signed|emailed|replied)\b/i.test(lower)
+          || /\b(?:check|mark|tick|complete|finish|remove|cross)\s+(?:off?\b)?/i.test(lower)
+          || /\b(?:done|finished|completed|paid)\s+(?:with\s+)?/i.test(lower)
+          || /\b(?:remove|delete|take off|scratch)\b.*\b(?:to\s*-?\s*do|list|checklist)\b/i.test(lower);
+        // Detect intent: unchecking a task
+        const isUncheck = /\b(?:uncheck|unmark|undo|bring back|not done|didn'?t|add back|re-?add)\b/i.test(lower);
+        if (!isCheck && !isUncheck) return null;
+
+        // Extract the task description by stripping command/filler words
+        let d = lower
+          .replace(/(?:i(?:'?ve)?|already|just)\s+(?:done|did|paid|finished|completed|ordered|sent|called|booked|bought|fixed|cleaned|submitted|applied|signed|emailed|replied)\s*/gi, '')
+          .replace(/\b(?:check|mark|tick|complete|finish|remove|cross)\s*(?:off?\s*)?/gi, '')
+          .replace(/\b(?:done|finished|completed|paid)\s*(?:with\s*)?/gi, '')
+          .replace(/\b(?:remove|delete|take off|scratch)\s*(?:from\s*)?/gi, '')
+          .replace(/\b(?:uncheck|unmark|undo|bring back|not done|didn'?t|add back|re-?add)\s*/gi, '')
+          .replace(/\b(?:the|my|a|an|from|to|in|it|on|of|is|and|or|as|do|so|up)\b/gi, '')
+          .replace(/\b(?:to\s*-?\s*do\s*(?:list)?|checklist|list)\b/gi, '')
+          .replace(/[.,!?;:]+/g, ' ').replace(/\s+/g, ' ').trim();
+        if (!d || d.length < 2) return null;
+        return { check: isCheck, taskDesc: d };
+      })();
+
+      if (checklistAction) {
+        // Search all notebooks for matching checklist items
+        let matched = false;
+        const words = checklistAction.taskDesc.split(/\s+/).filter(w => w.length > 1);
+        if (words.length === 0) { /* fall through to AI */ }
+        else {
+        for (const nbId of Object.keys(state.notes)) {
+          const notes = state.notes[nbId] || [];
+          for (const n of notes) {
+            if (!n.text || !n.text.includes('checklist-item')) continue;
+            const div = document.createElement('div');
+            div.innerHTML = n.text;
+            div.querySelectorAll('.checklist-item').forEach(item => {
+              const span = item.querySelector('span');
+              const cb = item.querySelector('input[type="checkbox"]');
+              if (!span || !cb) return;
+              const itemText = span.textContent.toLowerCase();
+              // Match: at least half the words appear in the item, or longest word matches
+              const hits = words.filter(w => itemText.includes(w));
+              const longestWord = words.reduce((a, b) => a.length >= b.length ? a : b, '');
+              const hasLongest = itemText.includes(longestWord);
+              if (hits.length >= Math.max(1, Math.ceil(words.length * 0.4)) || (hasLongest && longestWord.length >= 4)) {
+                if (checklistAction.check && !cb.checked) {
+                  cb.checked = true;
+                  item.classList.add('checked');
+                  matched = true;
+                } else if (!checklistAction.check && cb.checked) {
+                  cb.checked = false;
+                  item.classList.remove('checked');
+                  matched = true;
+                }
+              }
+            });
+            if (matched) {
+              n.text = div.innerHTML;
+            }
+          }
+        }
+        if (matched) {
+          saveState(); render();
+          btn.classList.remove('processing');
+          return;
+        }
+        } // end else (words.length > 0)
+        // If no match found, fall through to AI smart mode
+      }
+
       // ── NORMAL SMART MODE ──
       const nbNames = state.notebooks.map(n => n.name);
       const activeNb = state.notebooks.find(n => n.id === state.activeNotebook);
