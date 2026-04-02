@@ -1829,17 +1829,20 @@ function showColorPicker(anchor, nb) {
   });
   picker.appendChild(colorRow);
 
-  // Symbol section
+  // Symbol section — smart suggestions based on notebook name
   const symLabel = document.createElement('div');
   symLabel.className = 'picker-section-label';
   symLabel.textContent = 'Symbol';
   picker.appendChild(symLabel);
 
+  const suggestions = suggestSymbols(nb.name, 20);
+  // Fallback: if no suggestions, show a default set
+  const syms = suggestions.length ? suggestions : ['●','📌','📋','💡','⭐','📎','🔖','📁','🗂️','📝','🎯','✨','🔔','📊','🏷️','🛠️','💬','📦','🧩','🔮'];
   const symRow = document.createElement('div');
   symRow.className = 'picker-row';
-  SYMBOLS.forEach(s => {
+  syms.forEach(s => {
     const sw = document.createElement('div');
-    sw.className = 'symbol-swatch' + ((nb.symbol || '●')===s?' selected':'');
+    sw.className = 'symbol-swatch' + (nb.symbol === s ? ' selected' : '');
     sw.style.color = nb.color;
     sw.textContent = s;
     sw.addEventListener('click', e => {
@@ -1864,25 +1867,12 @@ function showNotebookCtx(e, nb) {
   const menu = document.getElementById('ctxMenu');
   const isTodo = isTodoNotebook(nb);
   const activeLabel = nb.active ? 'Deactivate' : 'Activate';
-  const suggestions = suggestSymbols(nb.name, 10);
-  const symRow = suggestions.length
-    ? `<div class="ctx-symbol-row">${suggestions.map(s => `<button class="ctx-symbol-btn" data-sym="${s}">${s}</button>`).join('')}</div>`
-    : '';
   menu.innerHTML = `
-    ${symRow}
     <div class="ctx-item" id="ctx-rename">Rename</div>
     ${!isTodo ? `<div class="ctx-item" id="ctx-toggle-active">${activeLabel}</div>` : ''}
     <div class="ctx-item danger" id="ctx-delete-nb">Delete notebook</div>
   `;
   posCtx(menu, e.clientX, e.clientY);
-
-  menu.querySelectorAll('.ctx-symbol-btn').forEach(btn => {
-    btn.onclick = () => {
-      hideCtx();
-      nb.symbol = btn.dataset.sym;
-      saveState(); render();
-    };
-  });
 
   document.getElementById('ctx-rename').onclick = () => {
     hideCtx();
