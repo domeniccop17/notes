@@ -853,25 +853,6 @@ function uid() { return Math.random().toString(36).slice(2,9); }
 const FIFTEEN_MIN = 15 * 60 * 1000;
 (function autoDeleteChecked() {
   const now = Date.now();
-  let willDelete = false;
-  // First pass: check if any deletions will happen
-  for (const nbId in state.notes) {
-    for (const note of state.notes[nbId]) {
-      if (!note.text.includes('data-checked-at')) continue;
-      const div = document.createElement('div');
-      div.innerHTML = note.text;
-      div.querySelectorAll('.checklist-item[data-checked-at]').forEach(item => {
-        const checkedAt = parseInt(item.getAttribute('data-checked-at'), 10);
-        if (checkedAt && (now - checkedAt) >= FIFTEEN_MIN) willDelete = true;
-      });
-    }
-  }
-  // Snapshot before deleting so Ctrl+Z can restore
-  if (willDelete) {
-    undoStack.push(JSON.stringify(state));
-    if (undoStack.length > MAX_UNDO) undoStack.shift();
-  }
-  // Second pass: stamp unstamped + delete old
   let changed = false;
   for (const nbId in state.notes) {
     for (const note of state.notes[nbId]) {
@@ -882,10 +863,12 @@ const FIFTEEN_MIN = 15 * 60 * 1000;
       div.querySelectorAll('.checklist-item.checked').forEach(item => {
         const checkedAt = parseInt(item.getAttribute('data-checked-at'), 10);
         if (checkedAt && (now - checkedAt) >= FIFTEEN_MIN) {
+          // Old enough — delete it
           item.remove();
           noteChanged = true;
           changed = true;
         } else if (!checkedAt) {
+          // No timestamp (checked before this feature) — stamp it now
           item.setAttribute('data-checked-at', now);
           noteChanged = true;
           changed = true;
@@ -1185,7 +1168,6 @@ function renderPanel(nbId, gridEl, titleEl, countEl) {
       if (e.target.type === 'checkbox') {
         const item = e.target.closest('.checklist-item');
         if (item) {
-          snapshotForUndo();
           item.classList.toggle('checked', e.target.checked);
           if (e.target.checked) {
             item.setAttribute('data-checked-at', Date.now());
