@@ -856,7 +856,7 @@ const FIFTEEN_MIN = 15 * 60 * 1000;
   let changed = false;
   for (const nbId in state.notes) {
     for (const note of state.notes[nbId]) {
-      if (!note.text.includes('checklist-item')) continue;
+      if (!note.text || !note.text.includes('checklist-item')) continue;
       const div = document.createElement('div');
       div.innerHTML = note.text;
       let noteChanged = false;
