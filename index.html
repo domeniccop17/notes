@@ -1209,17 +1209,8 @@ function renderSidebar() {
     list.appendChild(div);
   }
 
-  // Render activated notebooks first
+  // Render activated notebooks, then regular
   activated.forEach(renderNbItem);
-
-  // Separator between activated and regular (only if both groups exist)
-  if (activated.length > 0 && regular.length > 0) {
-    const sep2 = document.createElement('div');
-    sep2.className = 'todo-separator';
-    list.appendChild(sep2);
-  }
-
-  // Render regular notebooks
   regular.forEach(renderNbItem);
 }
 
