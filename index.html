@@ -2415,20 +2415,32 @@ Promise.all([
         // If no match found, fall through to AI smart mode
       }
 
-      // ── NORMAL SMART MODE ──
-      const nbNames = state.notebooks.map(n => n.name);
+      // ── NORMAL SMART MODE — send full notes structure ──
       const activeNb = state.notebooks.find(n => n.id === state.activeNotebook);
-      const activeNotes = (state.notes[state.activeNotebook] || []).map(n => ({
-        title: n.title || '',
-        content: n.text || ''
+      const MAX_CONTENT = 500;
+      const allNotebooks = state.notebooks.map(nb => ({
+        name: nb.name,
+        active: !!nb.active,
+        isTodo: isTodoNotebook(nb),
+        notes: (state.notes[nb.id] || []).map(n => ({
+          title: n.title || '',
+          content: (n.text || '').slice(0, MAX_CONTENT)
+        }))
       }));
-
+      // If payload would be too large, truncate non-active notebooks more
+      const payloadStr = JSON.stringify(allNotebooks);
+      if (payloadStr.length > 50000) {
+        allNotebooks.forEach(nb => {
+          if (nb.name !== (activeNb ? activeNb.name : '')) {
+            nb.notes.forEach(n => { n.content = n.content.slice(0, 200); });
+          }
+        });
+      }
       const payload = {
         text,
         mode: 'smart',
-        notebooks: nbNames,
-        activeNotebook: activeNb ? activeNb.name : '',
-        activeNotes
+        notebooks: allNotebooks,
+        activeNotebook: activeNb ? activeNb.name : ''
       };
       fetch('https://notes-polish.dcop14c.workers.dev', {
         method: 'POST',
@@ -2438,10 +2450,40 @@ Promise.all([
       })
         .then(r => r.ok ? r.json() : Promise.reject())
         .then(data => {
-          // ── EDIT existing note ──
+          // ── CHECK/UNCHECK checklist items across notebooks ──
+          if (data.action === 'check' || data.action === 'uncheck') {
+            const targetNb = data.notebook
+              ? state.notebooks.find(n => n.name.toLowerCase() === data.notebook.toLowerCase())
+              : state.notebooks.find(n => n.id === state.activeNotebook);
+            if (targetNb && data.items) {
+              const notes = state.notes[targetNb.id] || [];
+              const note = notes[data.noteIndex ?? 0];
+              if (note) {
+                const div = document.createElement('div');
+                div.innerHTML = note.text;
+                const items = div.querySelectorAll('.checklist-item');
+                (Array.isArray(data.items) ? data.items : [data.items]).forEach(idx => {
+                  const item = items[idx];
+                  if (!item) return;
+                  const cb = item.querySelector('input[type="checkbox"]');
+                  if (!cb) return;
+                  if (data.action === 'check') { cb.checked = true; item.classList.add('checked'); }
+                  else { cb.checked = false; item.classList.remove('checked'); }
+                });
+                note.text = div.innerHTML;
+              }
+            }
+            saveState(); render();
+            return;
+          }
+
+          // ── EDIT existing note (supports cross-notebook via data.notebook) ──
           if (data.action === 'edit' || (data.noteIndex !== undefined && data.content)) {
+            const editNbId = data.notebook
+              ? (state.notebooks.find(n => n.name.toLowerCase() === data.notebook.toLowerCase())?.id || state.activeNotebook)
+              : state.activeNotebook;
             const idx = data.noteIndex ?? 0;
-            const notes = state.notes[state.activeNotebook] || [];
+            const notes = state.notes[editNbId] || [];
             const target = notes[idx] || notes.find(n => n.text.trim());
             if (target) {
               target.text = data.content;
