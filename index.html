@@ -1505,6 +1505,9 @@ function renderPanel(nbId, gridEl, titleEl, countEl) {
       }
     });
 
+    // Track when user has exited checklist mode via double-enter
+    let _checklistExited = false;
+
     // Backspace in checklist — remove empty item in one press
     ta.addEventListener('keydown', e => {
       if (e.key === 'Backspace') {
@@ -1541,18 +1544,25 @@ function renderPanel(nbId, gridEl, titleEl, countEl) {
       const anchor = sel?.anchorNode;
       const el = anchor?.nodeType === Node.TEXT_NODE ? anchor.parentElement : anchor;
       const item = el?.closest('.checklist-item');
+
+      // If cursor is inside a checklist item, re-enable checklist mode
+      if (item) _checklistExited = false;
+
+      // If checklist mode was exited, let default Enter work (normal line breaks)
+      if (!item && _checklistExited) return;
+
       // also check if textarea contains any checklist items at all
       const hasChecklist = ta.querySelector('.checklist-item');
       if (!item && !hasChecklist) return; // no checklist, let default Enter work
 
       e.preventDefault();
 
-      // Double-enter on empty item → exit checklist mode
+      // Enter on empty item → exit checklist mode
       if (item) {
         const span = item.querySelector('span');
         const text = span ? span.textContent.replace(/\u200B/g, '').trim() : '';
         if (text === '') {
-          // Remove the empty checklist item and insert a normal line
+          _checklistExited = true;
           const normalLine = document.createElement('div');
           normalLine.innerHTML = '<br>';
           item.after(normalLine);
