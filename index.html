@@ -1034,6 +1034,27 @@ function renderPanel(nbId, gridEl, titleEl, countEl) {
 
   titleEl.textContent = nb.name;
   titleEl.style.setProperty('--nb-dot-color', nb.color);
+  titleEl.style.cursor = 'pointer';
+  titleEl.title = 'Click to rename';
+  titleEl.onclick = () => {
+    const input = document.createElement('input');
+    input.value = nb.name;
+    input.style.cssText = 'font:inherit;color:inherit;background:transparent;border:none;border-bottom:1px solid var(--muted);outline:none;width:' + Math.max(80, nb.name.length * 10) + 'px;padding:0;';
+    titleEl.textContent = '';
+    titleEl.appendChild(input);
+    input.focus();
+    input.select();
+    const save = () => {
+      const val = input.value.trim();
+      if (val && val !== nb.name) { nb.name = val; saveState(); }
+      render();
+    };
+    input.addEventListener('blur', save);
+    input.addEventListener('keydown', e => {
+      if (e.key === 'Enter') { e.preventDefault(); input.blur(); }
+      if (e.key === 'Escape') { input.value = nb.name; input.blur(); }
+    });
+  };
 
   const notes = state.notes[nb.id] || [];
   countEl.textContent = notes.filter(n => n.text.trim()).length + ' entries';
