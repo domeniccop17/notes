@@ -146,6 +146,37 @@
   }
   .notebook-item:hover .nb-split-btn { opacity: 1; }
   .nb-split-btn.split-active { opacity: 1; color: var(--accent); }
+
+  /* TO DO notebook distinction */
+  .notebook-item.todo-notebook {
+    border-left: 3px solid var(--accent);
+    padding-left: 7px;
+    flex-wrap: wrap;
+  }
+  .notebook-item.todo-notebook .todo-sidebar-bar {
+    width: 100%; height: 3px; background: var(--border);
+    border-radius: 2px; overflow: hidden; margin-top: 2px;
+  }
+  .notebook-item.todo-notebook .todo-sidebar-fill {
+    height: 100%; background: var(--accent); border-radius: 2px;
+    transition: width 0.3s ease;
+  }
+  .notebook-item.todo-notebook .notebook-count {
+    font-size: 10px;
+    background: rgba(124,77,255,0.12);
+    padding: 1px 5px;
+    border-radius: 8px;
+    min-width: auto;
+  }
+  .todo-header-bar {
+    width: 100%; height: 4px; background: var(--border);
+    border-radius: 2px; overflow: hidden; margin-top: 4px;
+  }
+  .todo-header-fill {
+    height: 100%; border-radius: 2px;
+    transition: width 0.3s ease;
+  }
+
   .panel-close-btn {
     background: none; border: none; cursor: pointer;
     color: var(--muted); font-size: 16px; padding: 0 4px; line-height: 1;
@@ -1003,6 +1034,22 @@ function loadState() {
   } catch { return null; }
 }
 
+// — TO DO progress helper ————————————————
+function getTodoProgress(nbId) {
+  const notes = state.notes[nbId] || [];
+  let total = 0, checked = 0;
+  notes.forEach(n => {
+    if (!n.text || !n.text.includes('checklist-item')) return;
+    const div = document.createElement('div');
+    div.innerHTML = n.text;
+    div.querySelectorAll('.checklist-item').forEach(item => {
+      total++;
+      if (item.classList.contains('checked')) checked++;
+    });
+  });
+  return { total, checked };
+}
+
 // — RENDER SIDEBAR ————————————————————————
 function renderSidebar() {
   const list = document.getElementById('notebookList');
@@ -1010,16 +1057,25 @@ function renderSidebar() {
   let nbDragSrcId = null;
   state.notebooks.forEach(nb => {
     const div = document.createElement('div');
-    div.className = 'notebook-item' + (nb.id === state.activeNotebook ? ' active' : '');
+    div.className = 'notebook-item' + (nb.id === state.activeNotebook ? ' active' : '') + (nb.todo ? ' todo-notebook' : '');
     div.draggable = true;
     div.dataset.id = nb.id;
     const count = (state.notes[nb.id] || []).filter(n=>n.text.trim()).length;
     const isSplit = nb.id === state.secondaryNotebook;
+    let countDisplay = `${count}`;
+    let progressBar = '';
+    if (nb.todo) {
+      const p = getTodoProgress(nb.id);
+      countDisplay = p.total ? `${p.checked}/${p.total}` : `${count}`;
+      const pct = p.total ? Math.round((p.checked / p.total) * 100) : 0;
+      progressBar = `<div class="todo-sidebar-bar"><div class="todo-sidebar-fill" style="width:${pct}%"></div></div>`;
+    }
     div.innerHTML = `
       <div class="notebook-dot" style="color:${nb.color}">${nb.symbol || '●'}</div>
       <span class="notebook-name">${escHtml(nb.name)}</span>
-      <span class="notebook-count">${count}</span>
+      <span class="notebook-count">${countDisplay}</span>
       <button class="nb-split-btn${isSplit ? ' split-active' : ''}" title="Open beside">⊞</button>
+      ${progressBar}
     `;
     div.addEventListener('click', (e) => {
       if (e.target.closest('.notebook-dot')) { showColorPicker(e.target.closest('.notebook-dot'), nb); return; }
@@ -1094,7 +1150,16 @@ function renderPanel(nbId, gridEl, titleEl, countEl) {
   };
 
   const notes = state.notes[nb.id] || [];
-  countEl.textContent = notes.filter(n => n.text.trim()).length + ' entries';
+  // Show progress info for TODO notebooks, entries count for normal ones
+  if (nb.todo) {
+    const p = getTodoProgress(nb.id);
+    const pct = p.total ? Math.round((p.checked / p.total) * 100) : 0;
+    const color = nb.color || 'var(--accent)';
+    countEl.innerHTML = `<span>${p.total ? p.checked + '/' + p.total + ' tasks done' : '0 tasks'}</span>` +
+      `<div class="todo-header-bar"><div class="todo-header-fill" style="width:${pct}%;background:${color}"></div></div>`;
+  } else {
+    countEl.textContent = notes.filter(n => n.text.trim()).length + ' entries';
+  }
 
   gridEl.innerHTML = '';
   let dragSrcId = null;
@@ -1589,8 +1654,10 @@ function showColorPicker(anchor, nb) {
 // — CONTEXT MENUS —————————————————————————
 function showNotebookCtx(e, nb) {
   const menu = document.getElementById('ctxMenu');
+  const todoLabel = nb.todo ? 'Unmark TO DO' : 'Mark as TO DO';
   menu.innerHTML = `
     <div class="ctx-item" id="ctx-rename">Rename</div>
+    <div class="ctx-item" id="ctx-toggle-todo">${todoLabel}</div>
     <div class="ctx-item danger" id="ctx-delete-nb">Delete notebook</div>
   `;
   posCtx(menu, e.clientX, e.clientY);
@@ -1600,6 +1667,12 @@ function showNotebookCtx(e, nb) {
     showModal('Rename Notebook', nb.name, val => {
       if (val) { nb.name = val; saveState(); render(); }
     });
+  };
+
+  document.getElementById('ctx-toggle-todo').onclick = () => {
+    hideCtx();
+    nb.todo = !nb.todo;
+    saveState(); render();
   };
 
   document.getElementById('ctx-delete-nb').onclick = () => {
