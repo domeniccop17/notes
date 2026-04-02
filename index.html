@@ -878,6 +878,42 @@ const SYMBOLS = [
   '☀','✦','♠','⬟','◉','✎','⚙','♦','◈','♫'
 ];
 
+// Auto-pick symbol based on notebook name
+const SYMBOL_KEYWORDS = {
+  '♪': ['music','song','audio','sound','band','playlist','beat','dj','radio','spotify'],
+  '♫': ['concert','album','instrument','piano','guitar','drum'],
+  '$': ['money','finance','budget','bank','invest','pay','cost','price','profit','sales','tax','crypto','stock','trading','revenue','expense'],
+  '♥': ['love','heart','health','care','relationship','date','wedding','family','friend','wellness'],
+  '☁': ['cloud','weather','server','hosting','deploy','aws','azure','dream'],
+  '☀': ['sun','summer','morning','day','bright','energy','solar','light','vacation'],
+  '✿': ['flower','garden','plant','nature','green','grow','organic','farm'],
+  '✎': ['write','note','blog','journal','diary','draft','essay','story','book','read','study','school','homework','exam','class','course','lecture'],
+  '⚙': ['setting','config','dev','code','tech','tool','build','engine','system','api','software','hardware','setup','fix','debug'],
+  '★': ['star','favorite','best','top','goal','wish','review','rate','import','vip','premium'],
+  '▲': ['mountain','travel','hike','adventure','trip','explore','camp','outdoor'],
+  '■': ['work','project','task','todo','plan','board','sprint','job','business','office','meeting','team'],
+  '♠': ['game','play','poker','card','casino','bet','sport','competition','chess'],
+  '◆': ['design','art','creative','draw','paint','ui','ux','graphic','visual','style','fashion'],
+  '◉': ['target','focus','aim','track','monitor','watch','eye','analyze','data','metric','stat'],
+  '✦': ['idea','spark','magic','special','new','launch','startup','innovation','inspire'],
+  '⬟': ['home','house','room','kitchen','clean','furniture','decor','apartment','rent'],
+  '◈': ['gem','diamond','premium','luxury','jewelry','value','treasure','collect'],
+  '♦': ['shop','store','buy','sell','market','product','retail','brand','commerce','order'],
+};
+
+function autoSymbol(name) {
+  const lower = name.toLowerCase();
+  let best = null, bestScore = 0;
+  for (const [sym, keywords] of Object.entries(SYMBOL_KEYWORDS)) {
+    for (const kw of keywords) {
+      if (lower.includes(kw) && kw.length > bestScore) {
+        best = sym; bestScore = kw.length;
+      }
+    }
+  }
+  return best || '●';
+}
+
 const PLACEHOLDERS = [
   'Start typing', 'Add a note', 'What\'s on your mind?',
   'Write something', 'Jot it down'
@@ -1850,7 +1886,7 @@ document.getElementById('addNotebookBtn').onclick = () => {
     const id = uid();
     const usedC = state.notebooks.map(n => n.color);
     const color = COLORS.find(c => !usedC.includes(c)) || COLORS[state.notebooks.length % COLORS.length];
-    state.notebooks.push({ id, name: val, color });
+    state.notebooks.push({ id, name: val, color, symbol: autoSymbol(val) });
     state.notes[id] = [makeNote()];
     state.activeNotebook = id;
     saveState(); render();
