@@ -1741,18 +1741,26 @@ function renderPanel(nbId, gridEl, titleEl, countEl) {
       }
 
       snapshotForUndo();
-      const newItem = document.createElement('div');
-      newItem.className = 'checklist-item';
-      newItem.innerHTML = '<input type="checkbox"><span>\u200B</span>';
-      item.after(newItem);
-
-      // place cursor in the new span
-      const newSpan = newItem.querySelector('span');
+      // Use execCommand so browser tracks this as one native-undoable action
       const range = document.createRange();
-      range.setStart(newSpan, 0);
+      range.setStartAfter(item);
       range.collapse(true);
       sel.removeAllRanges();
       sel.addRange(range);
+      document.execCommand('insertHTML', false,
+        '<div class="checklist-item"><input type="checkbox"><span>\u200B</span></div>');
+      // place cursor in the new span
+      const newItem = item.nextElementSibling;
+      if (newItem) {
+        const newSpan = newItem.querySelector('span');
+        if (newSpan) {
+          const r = document.createRange();
+          r.setStart(newSpan, 0);
+          r.collapse(true);
+          sel.removeAllRanges();
+          sel.addRange(r);
+        }
+      }
       note.text = ta.innerHTML;
       debounceSave();
     });
