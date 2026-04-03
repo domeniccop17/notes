@@ -1805,24 +1805,37 @@ function renderPanel(nbId, gridEl, titleEl, countEl) {
         content = ta.innerHTML.trim();
       }
       if (!content || content === '<br>') return;
+
+      // Separate checked (done) items — preserve them, only send unchecked to AI
+      const contentDiv = document.createElement('div');
+      contentDiv.innerHTML = content;
+      const checkedItems = [...contentDiv.querySelectorAll('.checklist-item.checked')];
+      checkedItems.forEach(item => item.remove());
+      const uncheckedContent = contentDiv.innerHTML.trim();
+      if (!uncheckedContent || uncheckedContent === '<br>') return;
+
       listBtn.classList.add('processing');
       snapshotForUndo();
       fetch('https://notes-polish.dcop14c.workers.dev', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: content, mode: 'checklist' }),
+        body: JSON.stringify({ text: uncheckedContent, mode: 'checklist' }),
         signal: AbortSignal.timeout(20000),
       })
         .then(r => r.ok ? r.json() : Promise.reject())
         .then(data => {
           if (data.content) {
-            const normalized = normalizeChecklist(data.content);
+            // Re-append preserved checked items after reorganized unchecked items
+            const resultDiv = document.createElement('div');
+            resultDiv.innerHTML = normalizeChecklist(data.content);
+            checkedItems.forEach(item => resultDiv.appendChild(item));
+            const finalHTML = resultDiv.innerHTML;
             if (savedRange) {
               sel.removeAllRanges();
               sel.addRange(savedRange);
-              document.execCommand('insertHTML', false, normalized);
+              document.execCommand('insertHTML', false, finalHTML);
             } else {
-              ta.innerHTML = normalized;
+              ta.innerHTML = finalHTML;
             }
             note.text = ta.innerHTML;
             debounceSave();
