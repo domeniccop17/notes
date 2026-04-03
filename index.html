@@ -1741,26 +1741,17 @@ function renderPanel(nbId, gridEl, titleEl, countEl) {
       }
 
       snapshotForUndo();
-      // Use execCommand so browser tracks this as one native-undoable action
+      const newItem = document.createElement('div');
+      newItem.className = 'checklist-item';
+      newItem.innerHTML = '<input type="checkbox"><span>\u200B</span>';
+      item.after(newItem);
+      // place cursor in the new span
+      const newSpan = newItem.querySelector('span');
       const range = document.createRange();
-      range.setStartAfter(item);
+      range.setStart(newSpan, 0);
       range.collapse(true);
       sel.removeAllRanges();
       sel.addRange(range);
-      document.execCommand('insertHTML', false,
-        '<div class="checklist-item"><input type="checkbox"><span>\u200B</span></div>');
-      // place cursor in the new span
-      const newItem = item.nextElementSibling;
-      if (newItem) {
-        const newSpan = newItem.querySelector('span');
-        if (newSpan) {
-          const r = document.createRange();
-          r.setStart(newSpan, 0);
-          r.collapse(true);
-          sel.removeAllRanges();
-          sel.addRange(r);
-        }
-      }
       note.text = ta.innerHTML;
       debounceSave();
     });
@@ -2260,12 +2251,18 @@ document.getElementById('addNoteBtn').onclick = () => {
         const before = ce.innerHTML;
         document.execCommand('undo');
         if (ce.innerHTML !== before) {
-          // native undo worked — clean up any now-empty checklist items
-          ce.querySelectorAll('.checklist-item').forEach(item => {
+          // Check if native undo left any empty checklist items
+          const hasEmpty = [...ce.querySelectorAll('.checklist-item')].some(item => {
             const span = item.querySelector('span');
             const text = span ? span.textContent.replace(/[\u200B\u00A0\uFEFF]/g, '').trim() : item.textContent.trim();
-            if (!text) item.remove();
+            return !text;
           });
+          if (hasEmpty && undoStack.length) {
+            // Revert native undo and use structural undo to remove entire checkbox
+            document.execCommand('redo');
+            structuralUndo();
+            return;
+          }
           // sync DOM back to state
           const noteId = ce.closest('[data-note-id]')?.dataset.noteId;
           if (noteId) {
