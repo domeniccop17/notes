@@ -1601,6 +1601,7 @@ function renderPanel(nbId, gridEl, titleEl, countEl) {
     ta.innerHTML = note.text;
     let _lastSnap = Date.now();
     let _snapTimer = null;
+    let _wasEmpty = !(note.text || '').trim();
     ta.addEventListener('input', () => {
       // User is genuinely typing — re-enable undo snapshots
       if (_isUndoRedoing) { _isUndoRedoing = false; clearTimeout(_undoRedoGuardTimer); }
@@ -1612,8 +1613,23 @@ function renderPanel(nbId, gridEl, titleEl, countEl) {
       const now = Date.now();
       if (now - _lastSnap > 1500) { snapshotForUndo(); _lastSnap = now; }
       _snapTimer = setTimeout(() => { snapshotForUndo(); _lastSnap = Date.now(); }, 1000);
-      // If note becomes empty, move it to end of notebook
+      // Update sidebar + header count when note toggles between empty/non-empty
       const isEmpty = !ta.textContent.trim() && !ta.querySelector('img');
+      if (isEmpty !== _wasEmpty) {
+        _wasEmpty = isEmpty;
+        renderSidebar();
+        // Also refresh the panel header count
+        const filledCount = notes.filter(n => (n.text || '').trim()).length;
+        if (isTodoNotebook(nb) || nb.active) {
+          const p = getTodoProgress(nb.id);
+          const pct = p.total ? Math.round((p.checked / p.total) * 100) : 0;
+          const color = nb.color || 'var(--accent)';
+          countEl.innerHTML = `<span>${p.total ? p.checked + '/' + p.total + ' tasks done' : '0 tasks'}</span>` +
+            `<div class="todo-header-bar"><div class="todo-header-fill" style="width:${pct}%;background:${color}"></div></div>`;
+        } else {
+          countEl.textContent = filledCount + ' entries';
+        }
+      }
       const arr = state.notes[nb.id];
       const curIdx = arr.indexOf(note);
       if (isEmpty && arr.length > 1 && curIdx < arr.length - 1) {
