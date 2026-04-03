@@ -1808,10 +1808,12 @@ function renderPanel(nbId, gridEl, titleEl, countEl) {
         e.stopPropagation();
         if (micBtn.classList.contains('polishing')) return;
 
-        // Capture selection before recording starts
+        // Capture cursor position / selection before recording starts
         const sel = window.getSelection();
         const hasSelection = sel && !sel.isCollapsed && ta.contains(sel.anchorNode);
+        const hasCursor = !hasSelection && sel && sel.rangeCount && ta.contains(sel.anchorNode);
         const savedSelRange = hasSelection ? sel.getRangeAt(0).cloneRange() : null;
+        const savedCursorRange = hasCursor ? sel.getRangeAt(0).cloneRange() : null;
         const selectedText = hasSelection ? sel.toString().trim() : '';
 
         // — stop active recording, polish accumulated transcript —
@@ -1884,40 +1886,23 @@ function renderPanel(nbId, gridEl, titleEl, countEl) {
                 }
               })
               .catch(() => {
-                ta.focus();
-                document.execCommand('insertText', false, text + ' ');
-                note.text = ta.innerHTML;
-                debounceSave();
-              })
-              .finally(() => micBtn.classList.remove('polishing'));
-          } else if (hasContent) {
-            // Note has content → AI edit mode
-            fetch('https://notes-polish.dcop14c.workers.dev', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ text, mode: 'note-edit', noteContent: currentContent }),
-              signal: AbortSignal.timeout(20000),
-            })
-              .then(r => r.ok ? r.json() : Promise.reject())
-              .then(data => {
-                if (data.content) {
-                  ta.innerHTML = data.content;
-                  note.text = ta.innerHTML;
-                  debounceSave();
-                }
-              })
-              .catch(() => {
-                // Fallback: just append polished text
-                ta.focus();
+                const s = window.getSelection();
+                s.removeAllRanges();
+                s.addRange(savedSelRange);
                 document.execCommand('insertText', false, text + ' ');
                 note.text = ta.innerHTML;
                 debounceSave();
               })
               .finally(() => micBtn.classList.remove('polishing'));
           } else {
-            // Empty note → simple polish + insert
-            const insertText = str => {
+            // No selection → polish transcript and insert at cursor position
+            const insertAtCursor = str => {
               ta.focus();
+              if (savedCursorRange) {
+                const s = window.getSelection();
+                s.removeAllRanges();
+                s.addRange(savedCursorRange);
+              }
               document.execCommand('insertText', false, str + ' ');
               note.text = ta.innerHTML;
               debounceSave();
@@ -1929,8 +1914,8 @@ function renderPanel(nbId, gridEl, titleEl, countEl) {
               signal: AbortSignal.timeout(15000),
             })
               .then(r => r.ok ? r.json() : Promise.reject())
-              .then(data => insertText(data.polished || text))
-              .catch(() => insertText(text))
+              .then(data => insertAtCursor(data.polished || text))
+              .catch(() => insertAtCursor(text))
               .finally(() => micBtn.classList.remove('polishing'));
           }
         };
