@@ -1644,9 +1644,6 @@ function renderPanel(nbId, gridEl, titleEl, countEl) {
       }
     });
 
-    // Track when user has exited checklist mode via double-enter
-    let _checklistExited = false;
-
     // Backspace in checklist — remove empty item in one press
     ta.addEventListener('keydown', e => {
       if (e.key === 'Backspace') {
@@ -1684,15 +1681,8 @@ function renderPanel(nbId, gridEl, titleEl, countEl) {
       const el = anchor?.nodeType === Node.TEXT_NODE ? anchor.parentElement : anchor;
       const item = el?.closest('.checklist-item');
 
-      // If cursor is inside a checklist item, re-enable checklist mode
-      if (item) _checklistExited = false;
-
-      // If checklist mode was exited, let default Enter work (normal line breaks)
-      if (!item && _checklistExited) return;
-
-      // also check if textarea contains any checklist items at all
-      const hasChecklist = ta.querySelector('.checklist-item');
-      if (!item && !hasChecklist) return; // no checklist, let default Enter work
+      // If cursor is not inside a checklist item, let default Enter work (normal line breaks)
+      if (!item) return;
 
       e.preventDefault();
 
@@ -1701,7 +1691,6 @@ function renderPanel(nbId, gridEl, titleEl, countEl) {
         const span = item.querySelector('span');
         const text = span ? span.textContent.replace(/\u200B/g, '').trim() : '';
         if (text === '') {
-          _checklistExited = true;
           const normalLine = document.createElement('div');
           normalLine.innerHTML = '<br>';
           item.after(normalLine);
@@ -1720,16 +1709,7 @@ function renderPanel(nbId, gridEl, titleEl, countEl) {
       const newItem = document.createElement('div');
       newItem.className = 'checklist-item';
       newItem.innerHTML = '<input type="checkbox"><span>\u200B</span>';
-
-      if (item) {
-        item.after(newItem);
-      } else {
-        // cursor is outside checklist items but checklist exists — append after last one
-        const allItems = ta.querySelectorAll('.checklist-item');
-        const lastItem = allItems[allItems.length - 1];
-        if (lastItem) lastItem.after(newItem);
-        else ta.appendChild(newItem);
-      }
+      item.after(newItem);
 
       // place cursor in the new span
       const newSpan = newItem.querySelector('span');
