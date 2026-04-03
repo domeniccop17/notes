@@ -520,6 +520,54 @@
     scrollbar-color: var(--border) transparent;
   }
 
+  /* NOTE SEARCH BAR */
+  .note-search-bar {
+    display: none;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+    flex-shrink: 0;
+  }
+  .note-search-bar.visible { display: flex; }
+  .note-search-bar input {
+    flex: 1;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 4px 8px;
+    color: var(--text);
+    outline: none;
+  }
+  .note-search-bar input:focus { border-color: var(--accent); }
+  .note-search-bar .search-count {
+    font-family: 'DM Mono', monospace;
+    font-size: 9px;
+    color: var(--muted);
+    white-space: nowrap;
+    min-width: 36px;
+    text-align: center;
+  }
+  .note-search-bar button {
+    background: none; border: none; cursor: pointer;
+    color: var(--muted); font-size: 14px; padding: 2px 4px;
+    border-radius: 4px; line-height: 1;
+  }
+  .note-search-bar button:hover { color: var(--text); background: var(--tag-bg); }
+  .note-textarea mark.search-hl {
+    background: rgba(255, 200, 0, 0.35);
+    color: inherit;
+    border-radius: 2px;
+    padding: 0;
+  }
+  .note-textarea mark.search-hl.current {
+    background: rgba(255, 150, 0, 0.6);
+    outline: 1px solid rgba(255, 150, 0, 0.8);
+  }
+
   .note-textarea {
     width: 100%;
     height: 100%;
@@ -1644,6 +1692,13 @@ function renderPanel(nbId, gridEl, titleEl, countEl) {
           <button class="note-delete-btn" title="Delete note">🗑</button>
         </div>
       </div>
+      <div class="note-search-bar">
+        <input type="text" class="note-search-input" placeholder="Find in note..." spellcheck="false" />
+        <span class="search-count"></span>
+        <button class="search-prev" title="Previous (Shift+Enter)">▲</button>
+        <button class="search-next" title="Next (Enter)">▼</button>
+        <button class="search-close" title="Close (Esc)">✕</button>
+      </div>
       <div class="note-body">
         <div class="note-textarea" contenteditable="true" spellcheck="false" data-placeholder="${PLACEHOLDERS[idx % PLACEHOLDERS.length]}"></div>
       </div>
@@ -1825,6 +1880,116 @@ function renderPanel(nbId, gridEl, titleEl, countEl) {
           note.text = ta.innerHTML; debounceSave();
           updateTaskCount();
         }
+      }
+    });
+
+    // SEARCH IN NOTE (Ctrl+F)
+    const searchBar = card.querySelector('.note-search-bar');
+    const searchInput = card.querySelector('.note-search-input');
+    const searchCount = card.querySelector('.search-count');
+    let _searchMarks = [];
+    let _searchIdx = -1;
+
+    function clearSearchHighlights() {
+      _searchMarks = [];
+      _searchIdx = -1;
+      ta.querySelectorAll('mark.search-hl').forEach(m => {
+        const parent = m.parentNode;
+        while (m.firstChild) parent.insertBefore(m.firstChild, m);
+        parent.removeChild(m);
+        parent.normalize();
+      });
+    }
+
+    function highlightSearchMatches(query) {
+      clearSearchHighlights();
+      if (!query) { searchCount.textContent = ''; return; }
+      const lowerQ = query.toLowerCase();
+
+      function walkText(node) {
+        if (node.nodeType === Node.TEXT_NODE) {
+          const text = node.textContent;
+          const lower = text.toLowerCase();
+          let idx = lower.indexOf(lowerQ);
+          if (idx === -1) return;
+          const frag = document.createDocumentFragment();
+          let last = 0;
+          while (idx !== -1) {
+            if (idx > last) frag.appendChild(document.createTextNode(text.slice(last, idx)));
+            const mark = document.createElement('mark');
+            mark.className = 'search-hl';
+            mark.textContent = text.slice(idx, idx + query.length);
+            frag.appendChild(mark);
+            _searchMarks.push(mark);
+            last = idx + query.length;
+            idx = lower.indexOf(lowerQ, last);
+          }
+          if (last < text.length) frag.appendChild(document.createTextNode(text.slice(last)));
+          node.parentNode.replaceChild(frag, node);
+        } else if (node.nodeType === Node.ELEMENT_NODE && node.tagName !== 'MARK') {
+          // Copy childNodes to array since we modify the DOM
+          [...node.childNodes].forEach(walkText);
+        }
+      }
+      walkText(ta);
+
+      if (_searchMarks.length) {
+        _searchIdx = 0;
+        _searchMarks[0].classList.add('current');
+        _searchMarks[0].scrollIntoView({ block: 'nearest' });
+        searchCount.textContent = `1/${_searchMarks.length}`;
+      } else {
+        searchCount.textContent = '0/0';
+      }
+    }
+
+    function searchNav(dir) {
+      if (!_searchMarks.length) return;
+      _searchMarks[_searchIdx].classList.remove('current');
+      _searchIdx = (_searchIdx + dir + _searchMarks.length) % _searchMarks.length;
+      _searchMarks[_searchIdx].classList.add('current');
+      _searchMarks[_searchIdx].scrollIntoView({ block: 'nearest' });
+      searchCount.textContent = `${_searchIdx + 1}/${_searchMarks.length}`;
+    }
+
+    function closeSearch() {
+      clearSearchHighlights();
+      searchBar.classList.remove('visible');
+      searchInput.value = '';
+      searchCount.textContent = '';
+      // Sync state after removing marks
+      note.text = ta.innerHTML;
+      debounceSave();
+      ta.focus();
+    }
+
+    searchInput.addEventListener('input', () => {
+      highlightSearchMatches(searchInput.value);
+    });
+
+    searchInput.addEventListener('keydown', e => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        searchNav(e.shiftKey ? -1 : 1);
+      }
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        closeSearch();
+      }
+    });
+
+    card.querySelector('.search-prev').addEventListener('click', () => searchNav(-1));
+    card.querySelector('.search-next').addEventListener('click', () => searchNav(1));
+    card.querySelector('.search-close').addEventListener('click', () => closeSearch());
+
+    // Ctrl+F on the note card opens search
+    card.addEventListener('keydown', e => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
+        e.preventDefault();
+        e.stopPropagation();
+        searchBar.classList.add('visible');
+        searchInput.focus();
+        if (searchInput.value) searchInput.select();
       }
     });
 
