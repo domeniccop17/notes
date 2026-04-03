@@ -1724,6 +1724,7 @@ function renderPanel(nbId, gridEl, titleEl, countEl) {
         const span = item.querySelector('span');
         const text = span ? span.textContent.replace(/\u200B/g, '').trim() : '';
         if (text === '') {
+          snapshotForUndo();
           const normalLine = document.createElement('div');
           normalLine.innerHTML = '<br>';
           item.after(normalLine);
@@ -1739,6 +1740,7 @@ function renderPanel(nbId, gridEl, titleEl, countEl) {
         }
       }
 
+      snapshotForUndo();
       const newItem = document.createElement('div');
       newItem.className = 'checklist-item';
       newItem.innerHTML = '<input type="checkbox"><span>\u200B</span>';
@@ -2250,7 +2252,13 @@ document.getElementById('addNoteBtn').onclick = () => {
         const before = ce.innerHTML;
         document.execCommand('undo');
         if (ce.innerHTML !== before) {
-          // native undo worked — sync DOM back to state
+          // native undo worked — clean up any now-empty checklist items
+          ce.querySelectorAll('.checklist-item').forEach(item => {
+            const span = item.querySelector('span');
+            const text = span ? span.textContent.replace(/[\u200B\u00A0\uFEFF]/g, '').trim() : item.textContent.trim();
+            if (!text) item.remove();
+          });
+          // sync DOM back to state
           const noteId = ce.closest('[data-note-id]')?.dataset.noteId;
           if (noteId) {
             for (const nbId of [state.activeNotebook, state.secondaryNotebook]) {
