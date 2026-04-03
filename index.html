@@ -423,7 +423,7 @@
   .note-title-wrap {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
     flex: 1;
     min-width: 0;
   }
@@ -485,7 +485,8 @@
     background: none;
     border: none;
     outline: none;
-    width: 100%;
+    min-width: 40px;
+    max-width: 100%;
     cursor: text;
   }
 
@@ -1649,7 +1650,12 @@ function renderPanel(nbId, gridEl, titleEl, countEl) {
     `;
 
     const titleInput = card.querySelector('.note-title');
-    titleInput.addEventListener('input', () => { note.title = titleInput.value; debounceSave(); });
+    function autoSizeTitle() {
+      const len = titleInput.value.length || 1;
+      titleInput.style.width = (len * 1.1 + 2) + 'ch';
+    }
+    autoSizeTitle();
+    titleInput.addEventListener('input', () => { note.title = titleInput.value; autoSizeTitle(); debounceSave(); });
     // First click selects all, second click places cursor
     let _titleSelected = false;
     titleInput.addEventListener('focus', () => { snapshotForUndo(); titleInput.select(); _titleSelected = true; });
