@@ -1297,8 +1297,11 @@ function normalizeChecklist(html) {
 const undoStack = [];
 const redoStack = [];
 const MAX_UNDO = 200;
+let _isUndoRedoing = false;
+let _undoRedoGuardTimer = null;
 
 function snapshotForUndo() {
+  if (_isUndoRedoing) return;
   // sync DOM → state
   document.querySelectorAll('.note-textarea').forEach(ta => {
     const noteId = ta.closest('[data-note-id]')?.dataset.noteId;
@@ -1318,6 +1321,8 @@ function snapshotForUndo() {
 
 function structuralUndo() {
   if (!undoStack.length) return;
+  _isUndoRedoing = true;
+  clearTimeout(_undoRedoGuardTimer);
   // save current for redo
   document.querySelectorAll('.note-textarea').forEach(ta => {
     const noteId = ta.closest('[data-note-id]')?.dataset.noteId;
@@ -1336,10 +1341,13 @@ function structuralUndo() {
   state.secondaryNotebook = prev.secondaryNotebook;
   try { localStorage.setItem('notes_app_v2', JSON.stringify(state)); } catch {}
   render();
+  _undoRedoGuardTimer = setTimeout(() => { _isUndoRedoing = false; }, 1500);
 }
 
 function structuralRedo() {
   if (!redoStack.length) return;
+  _isUndoRedoing = true;
+  clearTimeout(_undoRedoGuardTimer);
   document.querySelectorAll('.note-textarea').forEach(ta => {
     const noteId = ta.closest('[data-note-id]')?.dataset.noteId;
     if (!noteId) return;
@@ -1357,6 +1365,7 @@ function structuralRedo() {
   state.secondaryNotebook = next.secondaryNotebook;
   try { localStorage.setItem('notes_app_v2', JSON.stringify(state)); } catch {}
   render();
+  _undoRedoGuardTimer = setTimeout(() => { _isUndoRedoing = false; }, 1500);
 }
 
 function saveState() {
@@ -1593,6 +1602,8 @@ function renderPanel(nbId, gridEl, titleEl, countEl) {
     let _lastSnap = Date.now();
     let _snapTimer = null;
     ta.addEventListener('input', () => {
+      // User is genuinely typing — re-enable undo snapshots
+      if (_isUndoRedoing) { _isUndoRedoing = false; clearTimeout(_undoRedoGuardTimer); }
       note.text = ta.innerHTML;
       debounceSave();
       // Snapshot every 1.5s of typing for undo history
