@@ -2580,12 +2580,14 @@ Promise.all([
               const hasLongest = itemText.includes(longestWord);
               if (hits.length >= Math.max(1, Math.ceil(words.length * 0.4)) || (hasLongest && longestWord.length >= 4)) {
                 if (checklistAction.check && !cb.checked) {
-                  cb.checked = true;
+                  cb.checked = true; cb.setAttribute('checked', '');
                   item.classList.add('checked');
+                  item.setAttribute('data-checked-at', Date.now());
                   matched = true;
                 } else if (!checklistAction.check && cb.checked) {
-                  cb.checked = false;
+                  cb.checked = false; cb.removeAttribute('checked');
                   item.classList.remove('checked');
+                  item.removeAttribute('data-checked-at');
                   matched = true;
                 }
               }
@@ -2606,7 +2608,7 @@ Promise.all([
 
       // ── NORMAL SMART MODE — send full notes structure ──
       const activeNb = state.notebooks.find(n => n.id === state.activeNotebook);
-      const MAX_CONTENT = 500;
+      const MAX_CONTENT = 1000;
       const allNotebooks = state.notebooks.map(nb => ({
         name: nb.name,
         active: !!nb.active,
@@ -2639,6 +2641,12 @@ Promise.all([
       })
         .then(r => r.ok ? r.json() : Promise.reject())
         .then(data => {
+          // ── AI couldn't determine action — do nothing ──
+          if (data.action === 'none') {
+            btn.classList.remove('processing');
+            return;
+          }
+
           // ── CHECK/UNCHECK checklist items across notebooks ──
           if (data.action === 'check' || data.action === 'uncheck') {
             const targetNb = data.notebook
@@ -2656,8 +2664,15 @@ Promise.all([
                   if (!item) return;
                   const cb = item.querySelector('input[type="checkbox"]');
                   if (!cb) return;
-                  if (data.action === 'check') { cb.checked = true; item.classList.add('checked'); }
-                  else { cb.checked = false; item.classList.remove('checked'); }
+                  if (data.action === 'check') {
+                    cb.checked = true; cb.setAttribute('checked', '');
+                    item.classList.add('checked');
+                    item.setAttribute('data-checked-at', Date.now());
+                  } else {
+                    cb.checked = false; cb.removeAttribute('checked');
+                    item.classList.remove('checked');
+                    item.removeAttribute('data-checked-at');
+                  }
                 });
                 note.text = div.innerHTML;
               }
