@@ -1428,8 +1428,9 @@ function getTodoProgress(nbId) {
     div.innerHTML = n.text;
     div.querySelectorAll('.checklist-item').forEach(item => {
       const span = item.querySelector('span');
-      const text = span ? span.textContent.replace(/\u200B/g, '').trim() : item.textContent.trim();
-      if (!text) return; // skip empty checkbox items
+      const raw = span ? span.textContent : item.textContent;
+      const text = raw.replace(/[\u200B\u00A0\uFEFF]/g, '').trim();
+      if (!text || !/\w/.test(text)) return; // skip items without real text
       total++;
       if (item.classList.contains('checked')) checked++;
     });
