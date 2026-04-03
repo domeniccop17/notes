@@ -2212,25 +2212,48 @@ document.getElementById('addNoteBtn').onclick = () => {
 (function() {
   let spaceHeld = false;
   document.addEventListener('keydown', e => {
-    // Ctrl+Z / Ctrl+Y — native first (Word-like), structural fallback (AI actions)
+    // Ctrl+Z / Ctrl+Y — always intercept, try native contenteditable undo first, then structural
     if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
+      e.preventDefault(); // Always capture — we handle all undo ourselves
       const ce = e.target.closest('[contenteditable]');
       if (ce) {
         const before = ce.innerHTML;
         document.execCommand('undo');
-        if (ce.innerHTML !== before) return; // native undo worked
+        if (ce.innerHTML !== before) {
+          // native undo worked — sync DOM back to state
+          const noteId = ce.closest('[data-note-id]')?.dataset.noteId;
+          if (noteId) {
+            for (const nbId of [state.activeNotebook, state.secondaryNotebook]) {
+              if (!nbId) continue;
+              const note = state.notes[nbId]?.find(n => n.id === noteId);
+              if (note) { note.text = ce.innerHTML; debounceSave(); break; }
+            }
+          }
+          return;
+        }
       }
-      if (undoStack.length) { e.preventDefault(); structuralUndo(); }
+      if (undoStack.length) structuralUndo();
       return;
     }
     if ((e.ctrlKey || e.metaKey) && e.key === 'y') {
+      e.preventDefault(); // Always capture — we handle all redo ourselves
       const ce = e.target.closest('[contenteditable]');
       if (ce) {
         const before = ce.innerHTML;
         document.execCommand('redo');
-        if (ce.innerHTML !== before) return; // native redo worked
+        if (ce.innerHTML !== before) {
+          const noteId = ce.closest('[data-note-id]')?.dataset.noteId;
+          if (noteId) {
+            for (const nbId of [state.activeNotebook, state.secondaryNotebook]) {
+              if (!nbId) continue;
+              const note = state.notes[nbId]?.find(n => n.id === noteId);
+              if (note) { note.text = ce.innerHTML; debounceSave(); break; }
+            }
+          }
+          return;
+        }
       }
-      if (redoStack.length) { e.preventDefault(); structuralRedo(); }
+      if (redoStack.length) structuralRedo();
       return;
     }
     // Ctrl+G = bold, Ctrl+U = underline, Ctrl+B = bullet list
