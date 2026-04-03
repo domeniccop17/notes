@@ -1185,6 +1185,35 @@ const AUTO_DELETE_MS = 4 * 60 * 60 * 1000;
   }
 })();
 
+// — Fix checkbox attribute to match .checked class (one-time migration) ——
+(function fixCheckboxAttributes() {
+  let changed = false;
+  for (const nbId in state.notes) {
+    for (const note of state.notes[nbId]) {
+      if (!note.text || !note.text.includes('checklist-item')) continue;
+      const div = document.createElement('div');
+      div.innerHTML = note.text;
+      let noteChanged = false;
+      div.querySelectorAll('.checklist-item').forEach(item => {
+        const cb = item.querySelector('input[type="checkbox"]');
+        if (!cb) return;
+        const isChecked = item.classList.contains('checked');
+        if (isChecked && !cb.hasAttribute('checked')) {
+          cb.setAttribute('checked', '');
+          noteChanged = true;
+        } else if (!isChecked && cb.hasAttribute('checked')) {
+          cb.removeAttribute('checked');
+          noteChanged = true;
+        }
+      });
+      if (noteChanged) { note.text = div.innerHTML; changed = true; }
+    }
+  }
+  if (changed) {
+    try { localStorage.setItem('notes_app_v2', JSON.stringify(state)); } catch {}
+  }
+})();
+
 // — Hover progress tooltip for checked-off items ——
 (function initExpireTooltip() {
   const tip = document.createElement('div');
@@ -1734,9 +1763,12 @@ function renderPanel(nbId, gridEl, titleEl, countEl) {
             item.appendChild(span);
           }
           item.classList.toggle('checked', e.target.checked);
+          // Sync checked attribute so innerHTML serialization preserves state
           if (e.target.checked) {
+            e.target.setAttribute('checked', '');
             item.setAttribute('data-checked-at', Date.now());
           } else {
+            e.target.removeAttribute('checked');
             item.removeAttribute('data-checked-at');
           }
           note.text = ta.innerHTML; debounceSave();
