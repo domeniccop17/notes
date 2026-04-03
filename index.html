@@ -428,6 +428,18 @@
     min-width: 0;
   }
 
+  .note-task-count {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    font-weight: 500;
+    color: var(--muted);
+    background: var(--tag-bg);
+    border-radius: 8px;
+    padding: 1px 6px;
+    flex-shrink: 0;
+    letter-spacing: 0.03em;
+  }
+
   .note-actions {
     display: flex;
     align-items: center;
@@ -1603,11 +1615,26 @@ function renderPanel(nbId, gridEl, titleEl, countEl) {
     card.dataset.noteId = note.id;
     card.dataset.idx = idx;
 
+    // Count unchecked tasks in this note
+    const _noteTaskCount = (() => {
+      if (!note.text || !note.text.includes('checklist-item')) return 0;
+      const d = document.createElement('div'); d.innerHTML = note.text;
+      let count = 0;
+      d.querySelectorAll('.checklist-item').forEach(item => {
+        if (item.classList.contains('checked')) return;
+        const span = item.querySelector('span');
+        const t = span ? span.textContent.replace(/[\u200B\u00A0\uFEFF]/g, '').trim() : '';
+        if (t && /\w/.test(t)) count++;
+      });
+      return count;
+    })();
+
     card.innerHTML = `
       <div class="note-header" draggable="true">
         <div class="note-title-wrap">
           <div class="note-color-dot" style="background:${nb.color}"></div>
           <input class="note-title" value="${escHtml(note.title || 'Note ' + (idx+1))}" spellcheck="false" />
+          <span class="note-task-count" style="display:${_noteTaskCount ? 'inline' : 'none'}">${_noteTaskCount}</span>
         </div>
         <div class="note-actions">
           <button class="note-list-btn" title="AI organize as checklist">☑</button>
@@ -1632,6 +1659,18 @@ function renderPanel(nbId, gridEl, titleEl, countEl) {
 
     const ta = card.querySelector('.note-textarea');
     ta.innerHTML = note.text;
+    const taskCountEl = card.querySelector('.note-task-count');
+    function updateTaskCount() {
+      let c = 0;
+      ta.querySelectorAll('.checklist-item').forEach(item => {
+        if (item.classList.contains('checked')) return;
+        const span = item.querySelector('span');
+        const t = span ? span.textContent.replace(/[\u200B\u00A0\uFEFF]/g, '').trim() : '';
+        if (t && /\w/.test(t)) c++;
+      });
+      taskCountEl.textContent = c;
+      taskCountEl.style.display = c ? 'inline' : 'none';
+    }
     let _lastSnap = Date.now();
     let _snapTimer = null;
     let _wasEmpty = !(note.text || '').trim();
@@ -1646,6 +1685,7 @@ function renderPanel(nbId, gridEl, titleEl, countEl) {
       const now = Date.now();
       if (now - _lastSnap > 1500) { snapshotForUndo(); _lastSnap = now; }
       _snapTimer = setTimeout(() => { snapshotForUndo(); _lastSnap = Date.now(); }, 1000);
+      updateTaskCount();
       // Update sidebar + header count when note toggles between empty/non-empty
       const isEmpty = !ta.textContent.trim() && !ta.querySelector('img');
       if (isEmpty !== _wasEmpty) {
@@ -1777,6 +1817,7 @@ function renderPanel(nbId, gridEl, titleEl, countEl) {
             item.removeAttribute('data-checked-at');
           }
           note.text = ta.innerHTML; debounceSave();
+          updateTaskCount();
         }
       }
     });
@@ -1844,6 +1885,7 @@ function renderPanel(nbId, gridEl, titleEl, countEl) {
             }
             note.text = ta.innerHTML;
             debounceSave();
+            updateTaskCount();
           }
         })
         .catch(() => {})
