@@ -540,6 +540,39 @@
   .note-textarea .checklist-item.checked span {
     text-decoration: line-through; opacity: 0.5;
   }
+  .note-textarea .checklist-item.checked { position: relative; }
+
+  /* Hover progress tooltip for checked items */
+  .checklist-expire-tip {
+    position: fixed;
+    pointer-events: none;
+    z-index: 900;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 6px 10px;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.13);
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.04em;
+    color: var(--muted);
+    white-space: nowrap;
+    opacity: 0;
+    transition: opacity 0.15s;
+  }
+  .checklist-expire-tip.visible { opacity: 1; }
+  .checklist-expire-tip .expire-bar {
+    width: 110px; height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    margin-top: 4px;
+    overflow: hidden;
+  }
+  .checklist-expire-tip .expire-fill {
+    height: 100%; border-radius: 2px;
+    transition: width 0.3s, background 0.3s;
+  }
+
   /* Force checklist items to stack vertically even if wrapped */
   .note-textarea div:has(> .checklist-item) {
     display: flex; flex-direction: column;
@@ -1150,6 +1183,83 @@ const AUTO_DELETE_MS = 4 * 60 * 60 * 1000;
   if (changed) {
     try { localStorage.setItem('notes_app_v2', JSON.stringify(state)); } catch {}
   }
+})();
+
+// — Hover progress tooltip for checked-off items ——
+(function initExpireTooltip() {
+  const tip = document.createElement('div');
+  tip.className = 'checklist-expire-tip';
+  tip.innerHTML = '<span class="expire-label"></span><div class="expire-bar"><div class="expire-fill"></div></div>';
+  document.body.appendChild(tip);
+
+  let _tipTimer = null;
+
+  function fmtTime(ms) {
+    const s = Math.max(0, Math.floor(ms / 1000));
+    const h = Math.floor(s / 3600);
+    const m = Math.floor((s % 3600) / 60);
+    if (h > 0) return h + 'h ' + m + 'm';
+    if (m > 0) return m + 'm';
+    return '<1m';
+  }
+
+  function updateTip(item) {
+    const checkedAt = parseInt(item.getAttribute('data-checked-at'), 10);
+    if (!checkedAt) { tip.classList.remove('visible'); return; }
+    const elapsed = Date.now() - checkedAt;
+    const pct = Math.min(100, (elapsed / AUTO_DELETE_MS) * 100);
+    const remaining = Math.max(0, AUTO_DELETE_MS - elapsed);
+    tip.querySelector('.expire-label').textContent = fmtTime(elapsed) + ' / ' + fmtTime(AUTO_DELETE_MS) + '  ·  ' + fmtTime(remaining) + ' left';
+    const fill = tip.querySelector('.expire-fill');
+    fill.style.width = pct + '%';
+    // Color ramps green → amber → red
+    if (pct < 50) fill.style.background = '#4caf50';
+    else if (pct < 80) fill.style.background = '#ff9800';
+    else fill.style.background = '#e53935';
+  }
+
+  function showTip(item, e) {
+    updateTip(item);
+    tip.style.left = e.clientX + 12 + 'px';
+    tip.style.top = e.clientY - 40 + 'px';
+    tip.classList.add('visible');
+    clearInterval(_tipTimer);
+    _tipTimer = setInterval(() => updateTip(item), 1000);
+  }
+
+  function hideTip() {
+    tip.classList.remove('visible');
+    clearInterval(_tipTimer);
+    _tipTimer = null;
+  }
+
+  // Event delegation on the whole document for checked items
+  let _hoveredItem = null;
+  document.addEventListener('mouseover', e => {
+    const item = e.target.closest('.checklist-item.checked');
+    if (item && item !== _hoveredItem) {
+      _hoveredItem = item;
+      if (item.getAttribute('data-checked-at')) showTip(item, e);
+    } else if (!item && _hoveredItem) {
+      _hoveredItem = null;
+      hideTip();
+    }
+  });
+  document.addEventListener('mousemove', e => {
+    if (!_hoveredItem) return;
+    tip.style.left = e.clientX + 12 + 'px';
+    tip.style.top = e.clientY - 40 + 'px';
+  });
+  document.addEventListener('mouseout', e => {
+    const item = e.target.closest('.checklist-item.checked');
+    if (item && item === _hoveredItem) {
+      // Check if we're moving to a child — if so, stay
+      const related = e.relatedTarget;
+      if (related && item.contains(related)) return;
+      _hoveredItem = null;
+      hideTip();
+    }
+  });
 })();
 
 // — Normalize AI checklist HTML to match expected structure ——
