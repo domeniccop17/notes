@@ -1455,7 +1455,7 @@ function renderSidebar() {
     div.className = 'notebook-item' + (nb.id === state.activeNotebook ? ' active' : '') + (nb.active ? ' active-notebook' : '');
     div.draggable = true;
     div.dataset.id = nb.id;
-    const count = (state.notes[nb.id] || []).filter(n=>n.text.trim()).length;
+    const count = (state.notes[nb.id] || []).filter(n => (n.text || '').trim()).length;
     const isSplit = nb.id === state.secondaryNotebook;
     let countDisplay = `${count}`;
     let progressBar = '';
@@ -1558,7 +1558,7 @@ function renderPanel(nbId, gridEl, titleEl, countEl) {
     countEl.innerHTML = `<span>${p.total ? p.checked + '/' + p.total + ' tasks done' : '0 tasks'}</span>` +
       `<div class="todo-header-bar"><div class="todo-header-fill" style="width:${pct}%;background:${color}"></div></div>`;
   } else {
-    countEl.textContent = notes.filter(n => n.text.trim()).length + ' entries';
+    countEl.textContent = notes.filter(n => (n.text || '').trim()).length + ' entries';
   }
 
   gridEl.innerHTML = '';
