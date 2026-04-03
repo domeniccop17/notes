@@ -1893,7 +1893,7 @@ function renderPanel(nbId, gridEl, titleEl, countEl) {
 
         const resetSilenceTimer = () => {
           clearTimeout(silenceTimer);
-          silenceTimer = setTimeout(() => { if (window._activeRec === rec) rec.stop(); }, 1000);
+          silenceTimer = setTimeout(() => { if (window._activeRec === rec) rec.stop(); }, 500);
         };
 
         rec.onresult = ev => {
@@ -2479,7 +2479,7 @@ Promise.all([
 
     const resetSilenceTimer = () => {
       clearTimeout(silenceTimer);
-      silenceTimer = setTimeout(() => { if (window._smartRec === rec) rec.stop(); }, 1000);
+      silenceTimer = setTimeout(() => { if (window._smartRec === rec) rec.stop(); }, 500);
     };
 
     rec.onresult = ev => {
