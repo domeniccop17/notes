@@ -599,6 +599,27 @@
   }
   .note-textarea .checklist-item.checked { position: relative; }
 
+  /* CHECKLIST SUB-POINTS */
+  .note-textarea .checklist-sub {
+    display: flex; align-items: flex-start; gap: 4px;
+    margin: 1px 0 1px 28px;
+    width: calc(100% - 28px);
+    font-size: 11px;
+    line-height: 1.7;
+  }
+  .note-textarea .checklist-sub .sub-num {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    opacity: 0.6;
+    flex-shrink: 0;
+    min-width: 14px;
+    user-select: none;
+  }
+  .note-textarea .checklist-sub span:not(.sub-num) {
+    flex: 1; min-width: 0;
+  }
+
   /* Hover progress tooltip for checked items */
   .checklist-expire-tip {
     position: fixed;
@@ -1947,12 +1968,64 @@ function renderPanel(nbId, gridEl, titleEl, countEl) {
       }
     });
 
-    // Backspace in checklist — remove empty item in one press
+    // Helper: re-number sub-points after a parent checklist-item
+    function renumberSubs(parentItem) {
+      let n = 1;
+      let sib = parentItem.nextElementSibling;
+      while (sib && sib.classList.contains('checklist-sub')) {
+        const num = sib.querySelector('.sub-num');
+        if (num) num.textContent = n + '.';
+        n++;
+        sib = sib.nextElementSibling;
+      }
+    }
+    // Find the parent checklist-item for a sub-point
+    function findParentItem(sub) {
+      let sib = sub.previousElementSibling;
+      while (sib) {
+        if (sib.classList.contains('checklist-item')) return sib;
+        sib = sib.previousElementSibling;
+      }
+      return null;
+    }
+
+    // Backspace in checklist — remove empty item/sub in one press
     ta.addEventListener('keydown', e => {
       if (e.key === 'Backspace') {
         const sel = window.getSelection();
         const anchor = sel?.anchorNode;
         const el = anchor?.nodeType === Node.TEXT_NODE ? anchor.parentElement : anchor;
+
+        // Backspace in sub-point
+        const sub = el?.closest('.checklist-sub');
+        if (sub) {
+          const span = sub.querySelector('span:not(.sub-num)');
+          const text = span ? span.textContent.replace(/\u200B/g, '').trim() : '';
+          if (text === '') {
+            e.preventDefault();
+            const prev = sub.previousElementSibling;
+            const parent = findParentItem(sub);
+            sub.remove();
+            if (parent) renumberSubs(parent);
+            // Move cursor to end of previous sibling
+            const target = prev?.classList.contains('checklist-sub')
+              ? prev.querySelector('span:not(.sub-num)')
+              : prev?.classList.contains('checklist-item')
+                ? prev.querySelector('span')
+                : null;
+            if (target) {
+              const range = document.createRange();
+              range.selectNodeContents(target);
+              range.collapse(false);
+              sel.removeAllRanges();
+              sel.addRange(range);
+            }
+            note.text = ta.innerHTML;
+            debounceSave();
+          }
+          return;
+        }
+
         const item = el?.closest('.checklist-item');
         if (!item) return;
         const span = item.querySelector('span');
@@ -1962,8 +2035,10 @@ function renderPanel(nbId, gridEl, titleEl, countEl) {
           const prev = item.previousElementSibling;
           item.remove();
           // move cursor to end of previous item or start of textarea
-          if (prev && prev.classList.contains('checklist-item')) {
-            const prevSpan = prev.querySelector('span');
+          if (prev && (prev.classList.contains('checklist-item') || prev.classList.contains('checklist-sub'))) {
+            const prevSpan = prev.classList.contains('checklist-sub')
+              ? prev.querySelector('span:not(.sub-num)')
+              : prev.querySelector('span');
             if (prevSpan) {
               const range = document.createRange();
               range.selectNodeContents(prevSpan);
@@ -1977,11 +2052,101 @@ function renderPanel(nbId, gridEl, titleEl, countEl) {
         }
         return;
       }
+
+      // Tab on empty checklist item → convert to sub-point
+      if (e.key === 'Tab' && !e.shiftKey) {
+        const sel = window.getSelection();
+        const anchor = sel?.anchorNode;
+        const el = anchor?.nodeType === Node.TEXT_NODE ? anchor.parentElement : anchor;
+        const item = el?.closest('.checklist-item');
+        if (!item) return;
+        const span = item.querySelector('span');
+        const text = span ? span.textContent.replace(/\u200B/g, '').trim() : '';
+        if (text !== '') return; // Only convert empty items
+
+        e.preventDefault();
+        snapshotForUndo();
+
+        // Count existing sub-points above (between previous checklist-item and this item)
+        let num = 1;
+        let sib = item.previousElementSibling;
+        while (sib && sib.classList.contains('checklist-sub')) {
+          num++;
+          sib = sib.previousElementSibling;
+        }
+
+        // Convert checklist-item → checklist-sub
+        const subDiv = document.createElement('div');
+        subDiv.className = 'checklist-sub';
+        subDiv.innerHTML = `<span class="sub-num">${num}.</span><span>\u200B</span>`;
+        item.replaceWith(subDiv);
+
+        // Place cursor in the text span
+        const newSpan = subDiv.querySelector('span:not(.sub-num)');
+        const range = document.createRange();
+        range.setStart(newSpan, 0);
+        range.collapse(true);
+        sel.removeAllRanges();
+        sel.addRange(range);
+        note.text = ta.innerHTML;
+        debounceSave();
+        return;
+      }
+
       if (e.key !== 'Enter') return;
-      // find if cursor is in or near a checklist item
+
       const sel = window.getSelection();
       const anchor = sel?.anchorNode;
       const el = anchor?.nodeType === Node.TEXT_NODE ? anchor.parentElement : anchor;
+
+      // Enter inside a sub-point
+      const sub = el?.closest('.checklist-sub');
+      if (sub) {
+        e.preventDefault();
+        const span = sub.querySelector('span:not(.sub-num)');
+        const text = span ? span.textContent.replace(/\u200B/g, '').trim() : '';
+        if (text === '') {
+          // Empty sub → exit sub-point mode, create new checklist item
+          snapshotForUndo();
+          const parent = findParentItem(sub);
+          const newItem = document.createElement('div');
+          newItem.className = 'checklist-item';
+          newItem.innerHTML = '<input type="checkbox"><span>\u200B</span>';
+          sub.replaceWith(newItem);
+          if (parent) renumberSubs(parent);
+          const newSpan = newItem.querySelector('span');
+          const range = document.createRange();
+          range.setStart(newSpan, 0);
+          range.collapse(true);
+          sel.removeAllRanges();
+          sel.addRange(range);
+          note.text = ta.innerHTML;
+          debounceSave();
+          return;
+        }
+        // Non-empty sub → create next numbered sub-point
+        snapshotForUndo();
+        const curNum = sub.querySelector('.sub-num');
+        const nextNum = curNum ? parseInt(curNum.textContent) + 1 : 1;
+        const newSub = document.createElement('div');
+        newSub.className = 'checklist-sub';
+        newSub.innerHTML = `<span class="sub-num">${nextNum}.</span><span>\u200B</span>`;
+        sub.after(newSub);
+        // Renumber all subs under parent
+        const parent = findParentItem(sub);
+        if (parent) renumberSubs(parent);
+        const newSpan = newSub.querySelector('span:not(.sub-num)');
+        const range = document.createRange();
+        range.setStart(newSpan, 0);
+        range.collapse(true);
+        sel.removeAllRanges();
+        sel.addRange(range);
+        note.text = ta.innerHTML;
+        debounceSave();
+        return;
+      }
+
+      // find if cursor is in a checklist item
       const item = el?.closest('.checklist-item');
 
       // If cursor is not inside a checklist item, let default Enter work (normal line breaks)
@@ -2014,7 +2179,12 @@ function renderPanel(nbId, gridEl, titleEl, countEl) {
       const newItem = document.createElement('div');
       newItem.className = 'checklist-item';
       newItem.innerHTML = '<input type="checkbox"><span>\u200B</span>';
-      item.after(newItem);
+      // Insert after the last sub-point of this item (if any)
+      let insertAfter = item;
+      while (insertAfter.nextElementSibling && insertAfter.nextElementSibling.classList.contains('checklist-sub')) {
+        insertAfter = insertAfter.nextElementSibling;
+      }
+      insertAfter.after(newItem);
       // place cursor in the new span
       const newSpan = newItem.querySelector('span');
       const range = document.createRange();
