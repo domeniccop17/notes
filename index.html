@@ -1910,6 +1910,16 @@ function renderPanel(nbId, gridEl, titleEl, countEl) {
           if (e.target.checked) {
             e.target.setAttribute('checked', '');
             item.setAttribute('data-checked-at', Date.now());
+            // Move to end of checklist after a short delay (so user sees the check animation)
+            setTimeout(() => {
+              // Find the last checklist item in the textarea
+              const allItems = [...ta.querySelectorAll('.checklist-item')];
+              const lastItem = allItems[allItems.length - 1];
+              if (lastItem && lastItem !== item) {
+                lastItem.after(item);
+              }
+              note.text = ta.innerHTML; debounceSave();
+            }, 300);
           } else {
             e.target.removeAttribute('checked');
             item.removeAttribute('data-checked-at');
