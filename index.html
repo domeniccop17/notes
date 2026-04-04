@@ -424,7 +424,7 @@
   .note-title-wrap {
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 3px;
     flex: 1;
     min-width: 0;
   }
@@ -1698,7 +1698,7 @@ function renderPanel(nbId, gridEl, titleEl, countEl) {
     const titleInput = card.querySelector('.note-title');
     function autoSizeTitle() {
       const len = titleInput.value.length || 1;
-      titleInput.style.width = (len * 1.1 + 2) + 'ch';
+      titleInput.style.width = (len * 1.05 + 1) + 'ch';
     }
     autoSizeTitle();
     titleInput.addEventListener('input', () => { note.title = titleInput.value; autoSizeTitle(); debounceSave(); });
