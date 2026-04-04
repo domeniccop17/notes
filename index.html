@@ -598,6 +598,26 @@
     text-decoration: line-through; opacity: 0.5;
   }
   .note-textarea .checklist-item.checked { position: relative; }
+  .checklist-copy-btn {
+    position: fixed;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 1px 5px;
+    font-size: 10px;
+    cursor: pointer;
+    color: var(--muted);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.12s;
+    line-height: 1;
+    z-index: 50;
+  }
+  .checklist-copy-btn.visible {
+    opacity: 0.7;
+    pointer-events: auto;
+  }
+  .checklist-copy-btn:hover { opacity: 1; background: var(--tag-bg); }
 
   /* CHECKLIST SUB-POINTS */
   .note-textarea .checklist-sub {
@@ -2195,6 +2215,56 @@ function renderPanel(nbId, gridEl, titleEl, countEl) {
       note.text = ta.innerHTML;
       debounceSave();
     });
+
+    // Copy button — fixed-positioned, never inside contenteditable
+    const copyBtn = document.createElement('button');
+    copyBtn.className = 'checklist-copy-btn';
+    copyBtn.textContent = '⧉';
+    copyBtn.title = 'Copy task text';
+    document.body.appendChild(copyBtn);
+    let _copyTarget = null;
+
+    copyBtn.addEventListener('mousedown', e => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (!_copyTarget) return;
+      const span = _copyTarget.querySelector('span:not(.sub-num)') || _copyTarget.querySelector('span');
+      const text = span ? span.textContent.replace(/[\u200B\u00A0\uFEFF]/g, '').trim() : '';
+      if (text) {
+        navigator.clipboard.writeText(text).then(() => {
+          copyBtn.textContent = '✓';
+          setTimeout(() => { copyBtn.textContent = '⧉'; }, 800);
+        });
+      }
+    });
+
+    function updateCopyBtn() {
+      const sel = window.getSelection();
+      if (!sel || !sel.anchorNode) { copyBtn.classList.remove('visible'); _copyTarget = null; return; }
+      const el = sel.anchorNode.nodeType === Node.TEXT_NODE ? sel.anchorNode.parentElement : sel.anchorNode;
+      const item = el?.closest('.checklist-item');
+      if (item && ta.contains(item)) {
+        _copyTarget = item;
+        const span = item.querySelector('span');
+        const text = span ? span.textContent.replace(/[\u200B\u00A0\uFEFF]/g, '').trim() : '';
+        if (text) {
+          const rect = item.getBoundingClientRect();
+          copyBtn.style.left = (rect.right - 24) + 'px';
+          copyBtn.style.top = (rect.top + rect.height / 2 - 8) + 'px';
+          copyBtn.classList.add('visible');
+        } else {
+          copyBtn.classList.remove('visible');
+        }
+      } else {
+        copyBtn.classList.remove('visible');
+        _copyTarget = null;
+      }
+    }
+
+    ta.addEventListener('keyup', updateCopyBtn);
+    ta.addEventListener('mouseup', updateCopyBtn);
+    ta.addEventListener('focus', updateCopyBtn);
+    ta.addEventListener('blur', () => { setTimeout(() => { copyBtn.classList.remove('visible'); _copyTarget = null; }, 150); });
 
     // checkbox toggle — click checkbox to strike through + stamp timestamp
     ta.addEventListener('change', e => {
