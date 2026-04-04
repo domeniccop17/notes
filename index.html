@@ -671,8 +671,8 @@
     transition: width 0.3s, background 0.3s;
   }
 
-  /* PRIORITY LEVELS */
-  .note-textarea .checklist-item[data-priority="1"] {
+  /* PRIORITY LEVELS — default is low (grey) */
+  .note-textarea .checklist-item {
     border-left: 2px solid #888;
     padding-left: 6px;
   }
@@ -1453,8 +1453,7 @@ const AUTO_DELETE_MS = 4 * 60 * 60 * 1000;
   const menu = document.createElement('div');
   menu.className = 'priority-menu';
   menu.innerHTML = `
-    <div class="priority-menu-option" data-pri="0"><span class="pri-dot" style="background:transparent;border:1px solid var(--border)"></span>None</div>
-    <div class="priority-menu-option" data-pri="1"><span class="pri-dot p1"></span>Low</div>
+    <div class="priority-menu-option" data-pri="0"><span class="pri-dot p1"></span>Low</div>
     <div class="priority-menu-option" data-pri="2"><span class="pri-dot p2"></span>Medium</div>
     <div class="priority-menu-option" data-pri="3"><span class="pri-dot p3"></span>High</div>
   `;
