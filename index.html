@@ -418,6 +418,7 @@
     padding: 14px 16px 10px;
     flex-shrink: 0;
     border-bottom: 1px solid var(--border);
+    position: relative;
   }
 
   .note-title-wrap {
@@ -439,6 +440,49 @@
     flex-shrink: 0;
     letter-spacing: 0.03em;
   }
+
+  /* TITLE SUGGESTIONS */
+  .title-suggest-btn {
+    background: none; border: none; cursor: pointer;
+    font-size: 12px; padding: 0 2px; opacity: 0;
+    transition: opacity 0.15s; flex-shrink: 0;
+    color: var(--muted); line-height: 1;
+  }
+  .note-header:hover .title-suggest-btn { opacity: 0.5; }
+  .note-header:hover .title-suggest-btn:hover { opacity: 1; }
+  .title-suggest-btn.loading {
+    opacity: 1 !important;
+    animation: suggestPulse 0.8s ease-in-out infinite;
+  }
+  @keyframes suggestPulse {
+    0%,100% { opacity: 0.4; }
+    50% { opacity: 1; }
+  }
+  .title-suggest-dropdown {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 16px;
+    right: 16px;
+    z-index: 50;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+    overflow: hidden;
+  }
+  .title-suggest-dropdown.visible { display: block; }
+  .title-suggest-option {
+    padding: 8px 12px;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--text);
+    cursor: pointer;
+    border-bottom: 1px solid var(--border);
+    transition: background 0.1s;
+  }
+  .title-suggest-option:last-child { border-bottom: none; }
+  .title-suggest-option:hover { background: var(--tag-bg); }
 
   .note-actions {
     display: flex;
@@ -1635,6 +1679,7 @@ function renderPanel(nbId, gridEl, titleEl, countEl) {
         <div class="note-title-wrap">
           <div class="note-color-dot" style="background:${nb.color}"></div>
           <input class="note-title" value="${escHtml(note.title || 'Note ' + (idx+1))}" spellcheck="false" />
+          <button class="title-suggest-btn" title="AI title suggestions">✨</button>
           <span class="note-task-count" style="display:${_noteTaskCount ? 'inline' : 'none'}">${_noteTaskCount}</span>
         </div>
         <div class="note-actions">
@@ -1643,6 +1688,7 @@ function renderPanel(nbId, gridEl, titleEl, countEl) {
           <button class="note-clear-btn" title="Clear note">clear</button>
           <button class="note-delete-btn" title="Delete note">🗑</button>
         </div>
+        <div class="title-suggest-dropdown"></div>
       </div>
       <div class="note-body">
         <div class="note-textarea" contenteditable="true" spellcheck="false" data-placeholder="${PLACEHOLDERS[idx % PLACEHOLDERS.length]}"></div>
@@ -1661,6 +1707,52 @@ function renderPanel(nbId, gridEl, titleEl, countEl) {
     titleInput.addEventListener('focus', () => { snapshotForUndo(); titleInput.select(); _titleSelected = true; });
     titleInput.addEventListener('mouseup', e => {
       if (_titleSelected) { e.preventDefault(); _titleSelected = false; }
+    });
+
+    // AI Title Suggestions
+    const suggestBtn = card.querySelector('.title-suggest-btn');
+    const suggestDropdown = card.querySelector('.title-suggest-dropdown');
+    suggestBtn.addEventListener('click', async e => {
+      e.stopPropagation();
+      if (suggestBtn.classList.contains('loading')) return;
+      const content = (note.text || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+      if (!content) return;
+      suggestBtn.classList.add('loading');
+      suggestDropdown.classList.remove('visible');
+      try {
+        const res = await fetch('https://notes-polish.dcop14c.workers.dev', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text: content, mode: 'title-suggest' }),
+        });
+        const data = await res.json();
+        const titles = data.titles || [];
+        suggestDropdown.innerHTML = titles.map(t =>
+          `<div class="title-suggest-option">${t}</div>`
+        ).join('');
+        suggestDropdown.classList.add('visible');
+        suggestDropdown.querySelectorAll('.title-suggest-option').forEach(opt => {
+          opt.addEventListener('click', () => {
+            snapshotForUndo();
+            const newTitle = opt.textContent;
+            titleInput.value = newTitle;
+            note.title = newTitle;
+            autoSizeTitle();
+            debounceSave();
+            suggestDropdown.classList.remove('visible');
+          });
+        });
+      } catch (err) {
+        console.error('Title suggest error:', err);
+      } finally {
+        suggestBtn.classList.remove('loading');
+      }
+    });
+    // Close dropdown on click outside
+    document.addEventListener('click', e => {
+      if (!suggestDropdown.contains(e.target) && e.target !== suggestBtn) {
+        suggestDropdown.classList.remove('visible');
+      }
     });
 
     const ta = card.querySelector('.note-textarea');
