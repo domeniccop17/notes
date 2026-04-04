@@ -2248,9 +2248,19 @@ function renderPanel(nbId, gridEl, titleEl, countEl) {
         const span = item.querySelector('span');
         const text = span ? span.textContent.replace(/[\u200B\u00A0\uFEFF]/g, '').trim() : '';
         if (text) {
-          const rect = item.getBoundingClientRect();
-          copyBtn.style.left = (rect.right - 22) + 'px';
-          copyBtn.style.top = (rect.bottom - 16) + 'px';
+          // Find position of last character in span
+          const textNode = span.lastChild;
+          let endRect;
+          if (textNode && textNode.nodeType === Node.TEXT_NODE && textNode.textContent.length) {
+            const r = document.createRange();
+            r.setStart(textNode, textNode.textContent.length - 1);
+            r.setEnd(textNode, textNode.textContent.length);
+            endRect = r.getBoundingClientRect();
+          } else {
+            endRect = span.getBoundingClientRect();
+          }
+          copyBtn.style.left = (endRect.right + 4) + 'px';
+          copyBtn.style.top = (endRect.top) + 'px';
           copyBtn.classList.add('visible');
         } else {
           copyBtn.classList.remove('visible');
