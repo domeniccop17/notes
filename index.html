@@ -630,6 +630,63 @@
     transition: width 0.3s, background 0.3s;
   }
 
+  /* PRIORITY LEVELS */
+  .note-textarea .checklist-item[data-priority="1"] {
+    border-left: 2px solid #888;
+    padding-left: 6px;
+  }
+  .note-textarea .checklist-item[data-priority="2"] {
+    border-left: 2px solid #e8a030;
+    padding-left: 6px;
+  }
+  .note-textarea .checklist-item[data-priority="2"] span {
+    font-weight: 500;
+  }
+  .note-textarea .checklist-item[data-priority="3"] {
+    border-left: 2px solid #e05c4a;
+    padding-left: 6px;
+  }
+  .note-textarea .checklist-item[data-priority="3"] span {
+    font-weight: 700;
+  }
+
+  /* PRIORITY CONTEXT MENU */
+  .priority-menu {
+    position: fixed;
+    z-index: 999;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+    overflow: hidden;
+    display: none;
+    min-width: 130px;
+  }
+  .priority-menu.visible { display: block; }
+  .priority-menu-option {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 12px;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--text);
+    cursor: pointer;
+    border-bottom: 1px solid var(--border);
+    transition: background 0.1s;
+  }
+  .priority-menu-option:last-child { border-bottom: none; }
+  .priority-menu-option:hover { background: var(--tag-bg); }
+  .priority-menu-option .pri-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .priority-menu-option .pri-dot.p1 { background: #888; }
+  .priority-menu-option .pri-dot.p2 { background: #e8a030; }
+  .priority-menu-option .pri-dot.p3 { background: #e05c4a; }
+  .priority-menu-option.active { background: var(--tag-bg); }
+
   /* Force checklist items to stack vertically even if wrapped */
   .note-textarea div:has(> .checklist-item) {
     display: flex; flex-direction: column;
@@ -1347,6 +1404,81 @@ const AUTO_DELETE_MS = 4 * 60 * 60 * 1000;
       _hoveredItem = null;
       hideTip();
     }
+  });
+})();
+
+// — Priority context menu for checklist items ——
+(function initPriorityMenu() {
+  const menu = document.createElement('div');
+  menu.className = 'priority-menu';
+  menu.innerHTML = `
+    <div class="priority-menu-option" data-pri="0"><span class="pri-dot" style="background:transparent;border:1px solid var(--border)"></span>None</div>
+    <div class="priority-menu-option" data-pri="1"><span class="pri-dot p1"></span>Low</div>
+    <div class="priority-menu-option" data-pri="2"><span class="pri-dot p2"></span>Medium</div>
+    <div class="priority-menu-option" data-pri="3"><span class="pri-dot p3"></span>High</div>
+  `;
+  document.body.appendChild(menu);
+
+  let _targetItem = null;
+
+  function hideMenu() {
+    menu.classList.remove('visible');
+    _targetItem = null;
+  }
+
+  document.addEventListener('contextmenu', e => {
+    const item = e.target.closest('.checklist-item');
+    if (!item) return;
+    e.preventDefault();
+    _targetItem = item;
+
+    // Mark the current priority as active
+    const curPri = item.getAttribute('data-priority') || '0';
+    menu.querySelectorAll('.priority-menu-option').forEach(opt => {
+      opt.classList.toggle('active', opt.dataset.pri === curPri);
+    });
+
+    // Position menu at cursor
+    menu.style.left = e.clientX + 'px';
+    menu.style.top = e.clientY + 'px';
+    menu.classList.add('visible');
+
+    // Adjust if overflows viewport
+    requestAnimationFrame(() => {
+      const rect = menu.getBoundingClientRect();
+      if (rect.right > window.innerWidth) menu.style.left = (window.innerWidth - rect.width - 8) + 'px';
+      if (rect.bottom > window.innerHeight) menu.style.top = (window.innerHeight - rect.height - 8) + 'px';
+    });
+  });
+
+  menu.addEventListener('click', e => {
+    const opt = e.target.closest('.priority-menu-option');
+    if (!opt || !_targetItem) return;
+    const pri = opt.dataset.pri;
+    if (pri === '0') {
+      _targetItem.removeAttribute('data-priority');
+    } else {
+      _targetItem.setAttribute('data-priority', pri);
+    }
+    // Sync to state
+    const ta = _targetItem.closest('.note-textarea');
+    if (ta) {
+      const noteId = ta.closest('[data-note-id]')?.dataset.noteId;
+      if (noteId) {
+        for (const id of Object.keys(state.notes)) {
+          const note = (state.notes[id] || []).find(n => n.id === noteId);
+          if (note) { note.text = ta.innerHTML; saveState(); break; }
+        }
+      }
+    }
+    hideMenu();
+  });
+
+  document.addEventListener('click', e => {
+    if (!menu.contains(e.target)) hideMenu();
+  });
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') hideMenu();
   });
 })();
 
