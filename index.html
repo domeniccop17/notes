@@ -3785,8 +3785,8 @@ function collectDashTasks() {
   for (const nbId of Object.keys(state.notes)) {
     const nb = state.notebooks.find(n => n.id === nbId);
     if (!nb) continue;
-    // Only show tasks from active notebooks (activated or TO DO)
-    if (!nb.active && !isTodoNotebook(nb)) continue;
+    // Show tasks from activated notebooks, TO DO, or the currently viewed notebook
+    if (!nb.active && !isTodoNotebook(nb) && nb.id !== state.activeNotebook) continue;
     const nbName = nb.name;
     const nbColor = nb.color || 'var(--muted)';
     const nbSymbol = nb.symbol || '●';
