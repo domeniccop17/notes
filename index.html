@@ -74,7 +74,7 @@
     padding: 0 20px;
     display: flex;
     align-items: center;
-    overflow: hidden;
+    overflow: visible;
     box-shadow:
       0 2px 12px rgba(0,0,0,0.04),
       inset 0 1px 0 rgba(255,255,255,0.4);
@@ -129,11 +129,15 @@
     min-width: 0;
   }
   .td-pair-sep {
-    width: 1px;
-    height: 20px;
-    background: rgba(136,133,128,0.2);
+    width: 1.5px;
+    height: 26px;
+    background: rgba(136,133,128,0.45);
     flex-shrink: 0;
-    margin: 0 8px;
+    margin: 0 10px;
+    border-radius: 1px;
+  }
+  :root.dark .td-pair-sep {
+    background: rgba(200,195,185,0.25);
   }
 
   /* Priority icon */
@@ -155,13 +159,8 @@
     min-width: 0;
   }
 
-  /* Hover tooltip for full text */
-  .td-task-row:hover .td-tooltip {
-    opacity: 1;
-    transform: translateY(0);
-    pointer-events: auto;
-  }
-  .td-tooltip {
+  /* Hover tooltip for full text — lives on .task-display to escape overflow */
+  #dashTooltip {
     position: absolute;
     top: calc(100% + 6px);
     left: 12px;
@@ -181,9 +180,12 @@
     pointer-events: none;
     z-index: 100;
     box-shadow: 0 4px 16px rgba(0,0,0,0.15);
-    max-width: 400px;
   }
-  .td-tooltip::before {
+  #dashTooltip.show {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  #dashTooltip::before {
     content: '';
     position: absolute;
     top: -5px;
@@ -1184,6 +1186,7 @@
     <div class="task-display-inner" id="taskDisplayInner">
       <span class="task-display-empty">No tasks</span>
     </div>
+    <div id="dashTooltip"></div>
   </div>
   <div class="header-actions">
     <button class="btn icon-btn" id="darkModeBtn" title="Toggle dark mode">☀️</button>
@@ -3555,13 +3558,13 @@ function collectDashTasks() {
 
 function buildTaskRowHtml(task) {
   const icon = task.pri >= 3 ? '🔴' : task.pri === 2 ? '🟠' : '⚪';
-  let html = `<div class="td-task-row" data-nb-id="${task.nbId}" data-note-idx="${task.noteIdx}">`;
+  const escaped = task.text.replace(/"/g, '&quot;');
+  let html = `<div class="td-task-row" data-nb-id="${task.nbId}" data-note-idx="${task.noteIdx}" data-full-text="${escaped}">`;
   html += `<span class="td-pri-icon">${icon}</span>`;
   html += `<span class="td-task-text">${task.text}</span>`;
   if (!task.isTodo && task.nb) {
     html += `<span class="td-nb-label"><span class="td-nb-dot" style="background:${task.nbColor}"></span>${task.nb}</span>`;
   }
-  html += `<div class="td-tooltip">${task.text}</div>`;
   html += `</div>`;
   return html;
 }
@@ -3685,6 +3688,36 @@ document.getElementById('taskDisplay')?.addEventListener('click', (e) => {
     render();
   }
 });
+
+// Hover tooltip for full task text
+(function() {
+  const display = document.getElementById('taskDisplay');
+  const tip = document.getElementById('dashTooltip');
+  if (!display || !tip) return;
+  let hoverTimer = null;
+  display.addEventListener('mouseover', (e) => {
+    const row = e.target.closest('.td-task-row');
+    if (!row) return;
+    const full = row.getAttribute('data-full-text');
+    if (!full) return;
+    clearTimeout(hoverTimer);
+    hoverTimer = setTimeout(() => {
+      tip.textContent = full;
+      tip.classList.add('show');
+    }, 350);
+  });
+  display.addEventListener('mouseout', (e) => {
+    const row = e.target.closest('.td-task-row');
+    if (!row && !e.target.closest('#dashTooltip')) {
+      clearTimeout(hoverTimer);
+      tip.classList.remove('show');
+    }
+  });
+  display.addEventListener('mouseleave', () => {
+    clearTimeout(hoverTimer);
+    tip.classList.remove('show');
+  });
+})();
 
 // Auto-refresh every 30s
 setInterval(updateTaskDisplay, 30000);
