@@ -61,68 +61,138 @@
     text-transform: uppercase;
   }
 
-  /* TASK DISPLAY */
+  /* TASK DISPLAY — glass + neumorphism dashboard */
   .task-display {
     flex: 1;
-    max-width: 520px;
-    background: var(--bg);
-    border: none;
+    max-width: 580px;
+    background: rgba(236, 234, 228, 0.45);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(212, 208, 200, 0.4);
     border-radius: 18px;
-    padding: 24px 24px;
+    padding: 12px 20px;
     display: flex;
     align-items: center;
     overflow: hidden;
     box-shadow:
-      6px 6px 14px rgba(0, 0, 0, 0.08),
-      -6px -6px 14px rgba(255, 255, 255, 0.8);
+      5px 5px 12px rgba(0, 0, 0, 0.06),
+      -4px -4px 10px rgba(255, 255, 255, 0.7),
+      inset 0 1px 0 rgba(255, 255, 255, 0.5);
   }
   :root.dark .task-display {
+    background: rgba(34, 33, 32, 0.4);
+    border: 1px solid rgba(58, 56, 53, 0.35);
     box-shadow:
-      6px 6px 14px rgba(0, 0, 0, 0.4),
-      -6px -6px 14px rgba(255, 255, 255, 0.04);
+      5px 5px 12px rgba(0, 0, 0, 0.35),
+      -4px -4px 10px rgba(255, 255, 255, 0.03),
+      inset 0 1px 0 rgba(255, 255, 255, 0.05);
   }
   .task-display-inner {
     width: 100%;
     display: flex;
-    align-items: center;
-    gap: 16px;
+    flex-direction: column;
+    gap: 8px;
     overflow: hidden;
   }
-  .task-display-empty {
-    font-family: 'DM Sans', sans-serif;
-    font-size: 20px;
-    color: var(--muted);
-    opacity: 0.4;
-  }
-  .task-display-item {
+
+  /* Top row: progress bar + stats */
+  .td-top-row {
     display: flex;
     align-items: center;
-    gap: 7px;
-    white-space: nowrap;
-    flex-shrink: 0;
-    max-width: 240px;
+    gap: 12px;
+    width: 100%;
   }
-  .task-display-item .td-dot {
-    width: 10px; height: 10px;
+  .td-progress-wrap {
+    flex: 1;
+    height: 6px;
+    background: rgba(136, 133, 128, 0.15);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  :root.dark .td-progress-wrap {
+    background: rgba(136, 133, 128, 0.2);
+  }
+  .td-progress-bar {
+    height: 100%;
+    border-radius: 3px;
+    background: linear-gradient(90deg, #e05c4a, #e8a030, #6abf69);
+    transition: width 0.6s ease;
+  }
+  .td-stats {
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+  .td-stat {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 0.02em;
+  }
+  .td-stat .td-stat-dot {
+    width: 6px; height: 6px;
     border-radius: 50%;
     flex-shrink: 0;
   }
-  .task-display-item .td-dot.p3 { background: #e05c4a; box-shadow: 0 0 5px rgba(224,92,74,0.4); }
-  .task-display-item .td-dot.p2 { background: #e8a030; box-shadow: 0 0 5px rgba(232,160,48,0.3); }
-  .task-display-item .td-dot.p1 { background: #aaa; }
-  .task-display-item .td-text {
+  .td-stat .td-stat-dot.s-high { background: #e05c4a; }
+  .td-stat .td-stat-dot.s-med { background: #e8a030; }
+  .td-stat .td-stat-dot.s-low { background: #aaa; }
+
+  /* Bottom row: featured task */
+  .td-featured {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    overflow: hidden;
+  }
+  .td-featured .td-pri-badge {
+    font-family: 'DM Mono', monospace;
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    padding: 2px 7px;
+    border-radius: 4px;
+    flex-shrink: 0;
+  }
+  .td-pri-badge.b-high { background: rgba(224, 92, 74, 0.15); color: #e05c4a; }
+  .td-pri-badge.b-med { background: rgba(232, 160, 48, 0.15); color: #c08020; }
+  .td-pri-badge.b-low { background: rgba(136, 133, 128, 0.12); color: var(--muted); }
+  :root.dark .td-pri-badge.b-high { background: rgba(224, 92, 74, 0.2); color: #f07060; }
+  :root.dark .td-pri-badge.b-med { background: rgba(232, 160, 48, 0.2); color: #e8a030; }
+  :root.dark .td-pri-badge.b-low { background: rgba(136, 133, 128, 0.15); }
+  .td-featured .td-task-text {
     font-family: 'DM Sans', sans-serif;
-    font-size: 20px;
+    font-size: 13px;
     color: var(--text);
     overflow: hidden;
     text-overflow: ellipsis;
+    white-space: nowrap;
+    flex: 1;
   }
-  .task-display-item.pri-3 .td-text { color: var(--text); }
-  .task-display-item.pri-2 .td-text { color: var(--text); }
-  .task-display-sep {
-    width: 1px; height: 24px;
-    background: rgba(136, 133, 128, 0.25);
+  .td-featured .td-next-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 9px;
+    color: var(--muted);
+    opacity: 0.5;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
     flex-shrink: 0;
+  }
+
+  /* Empty state */
+  .task-display-empty {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    color: var(--muted);
+    opacity: 0.4;
+    width: 100%;
+    text-align: center;
+    padding: 6px 0;
   }
 
   .header-actions {
@@ -3381,54 +3451,68 @@ function updateTaskDisplay() {
   const inner = document.getElementById('taskDisplayInner');
   if (!inner) return;
 
-  // Collect unchecked tasks from TO DO notebook only
-  const tasks = [];
+  // Collect all tasks (checked + unchecked) from TO DO notebook
+  const unchecked = [];
+  let totalItems = 0;
+  let checkedItems = 0;
   for (const nbId of Object.keys(state.notes)) {
     const nb = state.notebooks.find(n => n.id === nbId);
     if (!nb || !isTodoNotebook(nb)) continue;
-    const nbName = nb.name;
     (state.notes[nbId] || []).forEach(note => {
       if (!note.text) return;
       const d = document.createElement('div');
       d.innerHTML = note.text;
       d.querySelectorAll('.checklist-item').forEach(item => {
-        if (item.classList.contains('checked')) return;
         const span = item.querySelector('span');
         const t = span ? span.textContent.replace(/[\u200B\u00A0\uFEFF]/g, '').trim() : '';
         if (!t || !/\w/.test(t)) return;
+        totalItems++;
+        if (item.classList.contains('checked')) { checkedItems++; return; }
         const pri = parseInt(item.getAttribute('data-priority') || '0') || 0;
-        tasks.push({ text: t, pri, nb: nbName });
+        unchecked.push({ text: t, pri });
       });
     });
   }
 
-  // Sort: high priority first, then medium, then low
-  tasks.sort((a, b) => b.pri - a.pri);
-
-  if (!tasks.length) {
-    inner.innerHTML = '<span class="task-display-empty">All clear</span>';
+  if (!totalItems) {
+    inner.innerHTML = '<span class="task-display-empty">No tasks yet</span>';
     return;
   }
 
-  // Show high priority first; fill remaining space with others
-  const high = tasks.filter(t => t.pri >= 3);
-  const med = tasks.filter(t => t.pri === 2);
-  const low = tasks.filter(t => t.pri < 2);
+  // Count by priority
+  const highCount = unchecked.filter(t => t.pri >= 3).length;
+  const medCount = unchecked.filter(t => t.pri === 2).length;
+  const lowCount = unchecked.filter(t => t.pri < 2).length;
+  const pct = totalItems > 0 ? Math.round((checkedItems / totalItems) * 100) : 0;
 
-  // Pick tasks to show: high first, then medium, then random low — max 2
-  let show = [...high, ...med];
-  if (show.length < 2) {
-    const shuffled = low.sort(() => Math.random() - 0.5);
-    show = show.concat(shuffled.slice(0, 2 - show.length));
+  // Pick featured task: highest priority first
+  unchecked.sort((a, b) => b.pri - a.pri);
+  const feat = unchecked[0];
+
+  // Build stats (only show counts > 0)
+  let statsHtml = '';
+  if (highCount) statsHtml += `<div class="td-stat"><span class="td-stat-dot s-high"></span>${highCount}</div>`;
+  if (medCount) statsHtml += `<div class="td-stat"><span class="td-stat-dot s-med"></span>${medCount}</div>`;
+  if (lowCount) statsHtml += `<div class="td-stat"><span class="td-stat-dot s-low"></span>${lowCount}</div>`;
+
+  // Top row: progress + stats
+  let html = `<div class="td-top-row">`;
+  html += `<div class="td-progress-wrap"><div class="td-progress-bar" style="width:${pct}%"></div></div>`;
+  html += `<div class="td-stats">${statsHtml}<div class="td-stat" style="opacity:0.5">${checkedItems}/${totalItems}</div></div>`;
+  html += `</div>`;
+
+  // Bottom row: featured task or all done
+  if (feat) {
+    const badge = feat.pri >= 3 ? 'b-high' : feat.pri === 2 ? 'b-med' : 'b-low';
+    const label = feat.pri >= 3 ? 'urgent' : feat.pri === 2 ? 'next' : 'to do';
+    html += `<div class="td-featured">`;
+    html += `<span class="td-pri-badge ${badge}">${label}</span>`;
+    html += `<span class="td-task-text">${feat.text}</span>`;
+    if (unchecked.length > 1) html += `<span class="td-next-label">+${unchecked.length - 1} more</span>`;
+    html += `</div>`;
+  } else {
+    html += `<div class="td-featured"><span class="td-task-text" style="text-align:center;color:var(--muted);opacity:0.5">All done \u2714</span></div>`;
   }
-  show = show.slice(0, 2);
-
-  const html = show.map((t, i) => {
-    const dotClass = t.pri >= 3 ? 'p3' : t.pri === 2 ? 'p2' : 'p1';
-    const priClass = t.pri >= 3 ? 'pri-3' : t.pri === 2 ? 'pri-2' : '';
-    const sep = i < show.length - 1 ? '<div class="task-display-sep"></div>' : '';
-    return `<div class="task-display-item ${priClass}"><span class="td-dot ${dotClass}"></span><span class="td-text">${t.text}</span></div>${sep}`;
-  }).join('');
 
   inner.innerHTML = html;
 }
