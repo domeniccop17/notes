@@ -1012,6 +1012,14 @@
   .note-textarea .checklist-item.checked::before {
     display: none;
   }
+  @keyframes dash-highlight {
+    0% { background: rgba(232,160,48,0.35); }
+    100% { background: transparent; }
+  }
+  .checklist-item.dash-highlight {
+    animation: dash-highlight 1.5s ease-out forwards;
+    border-radius: 4px;
+  }
 
   /* PRIORITY CONTEXT MENU */
   .priority-menu {
@@ -2770,7 +2778,7 @@ function renderPanel(nbId, gridEl, titleEl, countEl) {
         const rec = new SR();
         rec.continuous = true;
         rec.interimResults = true;
-        rec.lang = 'en-US';
+        rec.lang = 'fr-FR';
         let transcript = '';
         let silenceTimer = null;
 
@@ -3356,7 +3364,7 @@ Promise.all([
     const rec = new SR();
     rec.continuous = true;
     rec.interimResults = true;
-    rec.lang = 'en-US';
+    rec.lang = 'fr-FR';
     let transcript = '';
     let silenceTimer = null;
 
@@ -3724,7 +3732,7 @@ function collectDashTasks() {
 function buildTaskRowHtml(task) {
   const icon = task.pri >= 3 ? '🔴' : task.pri === 2 ? '🟠' : '⚪';
   const escaped = task.text.replace(/"/g, '&quot;');
-  let html = `<div class="td-task-row" data-nb-id="${task.nbId}" data-note-idx="${task.noteIdx}" data-full-text="${escaped}">`;
+  let html = `<div class="td-task-row" data-nb-id="${task.nbId}" data-note-idx="${task.noteIdx}" data-item-idx="${task.itemIdx}" data-full-text="${escaped}">`;
   html += `<span class="td-pri-icon">${icon}</span>`;
   html += `<span class="td-task-text">${task.text}</span>`;
   if (task.nb) {
@@ -3842,15 +3850,27 @@ function updateTaskDisplay() {
   renderDashSlides();
 }
 
-// Click task row to navigate
+// Click task row to navigate and highlight
 document.getElementById('taskDisplay')?.addEventListener('click', (e) => {
   const row = e.target.closest('.td-task-row');
   if (!row) return;
   const nbId = row.getAttribute('data-nb-id');
+  const noteIdx = parseInt(row.getAttribute('data-note-idx'));
+  const itemIdx = parseInt(row.getAttribute('data-item-idx'));
   if (nbId && state.notes[nbId]) {
     state.activeNotebook = nbId;
     saveState();
     render();
+    // Find and highlight the specific checklist item
+    const cards = document.querySelectorAll('#notesGrid .note-card');
+    const card = cards[noteIdx];
+    if (!card) return;
+    const items = card.querySelectorAll('.checklist-item');
+    const target = items[itemIdx];
+    if (!target) return;
+    target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    target.classList.add('dash-highlight');
+    setTimeout(() => target.classList.remove('dash-highlight'), 1500);
   }
 });
 
