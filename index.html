@@ -95,53 +95,7 @@
     overflow: hidden;
   }
 
-  /* Top row: progress bar + stats */
-  .td-top-row {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    width: 100%;
-  }
-  .td-progress-wrap {
-    flex: 1;
-    height: 6px;
-    background: rgba(136, 133, 128, 0.15);
-    border-radius: 3px;
-    overflow: hidden;
-  }
-  :root.dark .td-progress-wrap {
-    background: rgba(136, 133, 128, 0.2);
-  }
-  .td-progress-bar {
-    height: 100%;
-    border-radius: 3px;
-    background: linear-gradient(90deg, #e05c4a, #e8a030, #6abf69);
-    transition: width 0.6s ease;
-  }
-  .td-stats {
-    display: flex;
-    gap: 8px;
-    flex-shrink: 0;
-  }
-  .td-stat {
-    display: flex;
-    align-items: center;
-    gap: 3px;
-    font-family: 'DM Mono', monospace;
-    font-size: 10px;
-    color: var(--muted);
-    letter-spacing: 0.02em;
-  }
-  .td-stat .td-stat-dot {
-    width: 6px; height: 6px;
-    border-radius: 50%;
-    flex-shrink: 0;
-  }
-  .td-stat .td-stat-dot.s-high { background: #e05c4a; }
-  .td-stat .td-stat-dot.s-med { background: #e8a030; }
-  .td-stat .td-stat-dot.s-low { background: #aaa; }
-
-  /* Bottom row: featured task */
+  /* Featured task row */
   .td-featured {
     display: flex;
     align-items: center;
@@ -3451,67 +3405,54 @@ function updateTaskDisplay() {
   const inner = document.getElementById('taskDisplayInner');
   if (!inner) return;
 
-  // Collect all tasks (checked + unchecked) from TO DO notebook
-  const unchecked = [];
-  let totalItems = 0;
-  let checkedItems = 0;
+  // Collect unchecked tasks from ALL notebooks
+  const tasks = [];
   for (const nbId of Object.keys(state.notes)) {
     const nb = state.notebooks.find(n => n.id === nbId);
-    if (!nb || !isTodoNotebook(nb)) continue;
+    const nbName = nb ? nb.name : '';
     (state.notes[nbId] || []).forEach(note => {
       if (!note.text) return;
       const d = document.createElement('div');
       d.innerHTML = note.text;
       d.querySelectorAll('.checklist-item').forEach(item => {
+        if (item.classList.contains('checked')) return;
         const span = item.querySelector('span');
         const t = span ? span.textContent.replace(/[\u200B\u00A0\uFEFF]/g, '').trim() : '';
         if (!t || !/\w/.test(t)) return;
-        totalItems++;
-        if (item.classList.contains('checked')) { checkedItems++; return; }
         const pri = parseInt(item.getAttribute('data-priority') || '0') || 0;
-        unchecked.push({ text: t, pri });
+        tasks.push({ text: t, pri, nb: nbName });
       });
     });
   }
 
-  if (!totalItems) {
-    inner.innerHTML = '<span class="task-display-empty">No tasks yet</span>';
+  if (!tasks.length) {
+    inner.innerHTML = '<span class="task-display-empty">All clear</span>';
     return;
   }
 
-  // Count by priority
-  const highCount = unchecked.filter(t => t.pri >= 3).length;
-  const medCount = unchecked.filter(t => t.pri === 2).length;
-  const lowCount = unchecked.filter(t => t.pri < 2).length;
-  const pct = totalItems > 0 ? Math.round((checkedItems / totalItems) * 100) : 0;
+  // Sort by priority (highest first), then randomize within same priority
+  tasks.sort((a, b) => b.pri - a.pri || (Math.random() - 0.5));
+  const feat = tasks[0];
 
-  // Pick featured task: highest priority first
-  unchecked.sort((a, b) => b.pri - a.pri);
-  const feat = unchecked[0];
+  const badge = feat.pri >= 3 ? 'b-high' : feat.pri === 2 ? 'b-med' : 'b-low';
+  const label = feat.pri >= 3 ? 'urgent' : feat.pri === 2 ? 'next' : 'to do';
 
-  // Build stats (only show counts > 0)
-  let statsHtml = '';
-  if (highCount) statsHtml += `<div class="td-stat"><span class="td-stat-dot s-high"></span>${highCount}</div>`;
-  if (medCount) statsHtml += `<div class="td-stat"><span class="td-stat-dot s-med"></span>${medCount}</div>`;
-  if (lowCount) statsHtml += `<div class="td-stat"><span class="td-stat-dot s-low"></span>${lowCount}</div>`;
-
-  // Top row: progress + stats
-  let html = `<div class="td-top-row">`;
-  html += `<div class="td-progress-wrap"><div class="td-progress-bar" style="width:${pct}%"></div></div>`;
-  html += `<div class="td-stats">${statsHtml}<div class="td-stat" style="opacity:0.5">${checkedItems}/${totalItems}</div></div>`;
+  let html = `<div class="td-featured">`;
+  html += `<span class="td-pri-badge ${badge}">${label}</span>`;
+  html += `<span class="td-task-text">${feat.text}</span>`;
+  if (feat.nb) html += `<span class="td-next-label">${feat.nb}</span>`;
   html += `</div>`;
 
-  // Bottom row: featured task or all done
-  if (feat) {
-    const badge = feat.pri >= 3 ? 'b-high' : feat.pri === 2 ? 'b-med' : 'b-low';
-    const label = feat.pri >= 3 ? 'urgent' : feat.pri === 2 ? 'next' : 'to do';
+  // If there's a second task worth showing (different from first), add it
+  const second = tasks.find((t, i) => i > 0 && t.text !== feat.text);
+  if (second) {
+    const badge2 = second.pri >= 3 ? 'b-high' : second.pri === 2 ? 'b-med' : 'b-low';
+    const label2 = second.pri >= 3 ? 'urgent' : second.pri === 2 ? 'next' : 'to do';
     html += `<div class="td-featured">`;
-    html += `<span class="td-pri-badge ${badge}">${label}</span>`;
-    html += `<span class="td-task-text">${feat.text}</span>`;
-    if (unchecked.length > 1) html += `<span class="td-next-label">+${unchecked.length - 1} more</span>`;
+    html += `<span class="td-pri-badge ${badge2}">${label2}</span>`;
+    html += `<span class="td-task-text">${second.text}</span>`;
+    if (second.nb) html += `<span class="td-next-label">${second.nb}</span>`;
     html += `</div>`;
-  } else {
-    html += `<div class="td-featured"><span class="td-task-text" style="text-align:center;color:var(--muted);opacity:0.5">All done \u2714</span></div>`;
   }
 
   inner.innerHTML = html;
