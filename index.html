@@ -3533,9 +3533,12 @@ function collectDashTasks() {
   const now = Date.now();
   for (const nbId of Object.keys(state.notes)) {
     const nb = state.notebooks.find(n => n.id === nbId);
-    const nbName = nb ? nb.name : '';
-    const nbColor = nb ? nb.color : 'var(--muted)';
-    const isTodo = nb && isTodoNotebook(nb);
+    if (!nb) continue;
+    // Only show tasks from active notebooks (activated or TO DO)
+    if (!nb.active && !isTodoNotebook(nb)) continue;
+    const nbName = nb.name;
+    const nbColor = nb.color || 'var(--muted)';
+    const isTodo = isTodoNotebook(nb);
     (state.notes[nbId] || []).forEach((note, noteIdx) => {
       if (!note.text) return;
       const d = document.createElement('div');
@@ -3546,8 +3549,6 @@ function collectDashTasks() {
         const t = span ? span.textContent.replace(/[\u200B\u00A0\uFEFF]/g, '').trim() : '';
         if (!t || !/\w/.test(t)) return;
         const pri = parseInt(item.getAttribute('data-priority') || '0') || 0;
-        if (pri === 2) return; // skip medium priority from dashboard
-        // Age boost: tasks older than 24h get +0.5 per day, capped at +2
         const created = parseInt(item.getAttribute('data-created-at') || '0');
         const ageDays = created ? (now - created) / 86400000 : 0;
         const ageBoost = Math.min(ageDays * 0.5, 2);
@@ -3558,7 +3559,8 @@ function collectDashTasks() {
       });
     });
   }
-  // Sort by priority first (red > orange > grey), then by age within same priority
+  // Sort strictly by priority tier: high(3) > medium(2) > low(0)
+  // Within same priority, sort by age (older first)
   tasks.sort((a, b) => b.pri - a.pri || b.score - a.score);
   return tasks;
 }
