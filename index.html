@@ -225,22 +225,22 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background: rgba(106,191,105,0.12);
+    background: rgba(76,175,80,0.3);
     border-radius: 16px;
     opacity: 0;
     pointer-events: none;
     transition: opacity 0.3s ease;
-    z-index: 2;
+    z-index: 10;
   }
   .td-done-flash.show { opacity: 1; }
   .td-done-flash span {
     font-family: 'DM Sans', sans-serif;
-    font-size: 13px;
-    color: #4a9e4a;
-    font-weight: 500;
+    font-size: 14px;
+    color: #2e7d32;
+    font-weight: 600;
   }
-  :root.dark .td-done-flash { background: rgba(106,191,105,0.1); }
-  :root.dark .td-done-flash span { color: #6abf69; }
+  :root.dark .td-done-flash { background: rgba(76,175,80,0.25); }
+  :root.dark .td-done-flash span { color: #81c784; }
 
   /* Empty state */
   .task-display-empty {
@@ -2667,6 +2667,7 @@ function renderPanel(nbId, gridEl, titleEl, countEl) {
           }
           note.text = ta.innerHTML; debounceSave();
           updateTaskCount();
+          updateTaskDisplay();
         }
       }
     });
@@ -3861,7 +3862,12 @@ function renderDashSlides(forceRebuild) {
     pairs.push(_dashTasks.slice(i, i + 2));
   }
 
-  let html = '<div class="td-done-flash" id="tdDoneFlash"><span>\u2713 Done</span></div>';
+  // Ensure flash overlay exists on .task-display (parent), not inner
+  const display = document.getElementById('taskDisplay');
+  if (display && !document.getElementById('tdDoneFlash')) {
+    display.insertAdjacentHTML('beforeend', '<div class="td-done-flash" id="tdDoneFlash"><span>\u2713 Done</span></div>');
+  }
+  let html = '';
   pairs.forEach((pair, i) => {
     const cls = i === 0 ? 'td-pair active' : 'td-pair';
     html += `<div class="${cls}">`;
