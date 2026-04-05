@@ -1865,7 +1865,7 @@ const AUTO_DELETE_MS = 4 * 60 * 60 * 1000;
       if (noteId) {
         for (const id of Object.keys(state.notes)) {
           const note = (state.notes[id] || []).find(n => n.id === noteId);
-          if (note) { note.text = ta.innerHTML; saveState(); break; }
+          if (note) { note.text = ta.innerHTML; saveState(); updateTaskDisplay(); break; }
         }
       }
     }
@@ -3871,7 +3871,7 @@ function renderDashSlides() {
   // Start carousel if more than 1 pair
   if (_dashCarouselTimer) clearInterval(_dashCarouselTimer);
   if (pairs.length > 1) {
-    _dashCarouselTimer = setInterval(advanceDashSlide, 12000);
+    _dashCarouselTimer = setInterval(advanceDashSlide, 6000);
   }
 }
 
@@ -4012,7 +4012,7 @@ document.getElementById('taskDisplay')?.addEventListener('click', (e) => {
 })();
 
 // Auto-refresh every 30s
-setInterval(updateTaskDisplay, 30000);
+setInterval(updateTaskDisplay, 10000);
 
 // ── TIMER ───────────────────────────────────────
 (function() {
