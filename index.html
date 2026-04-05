@@ -3721,10 +3721,11 @@ document.getElementById('taskDisplay')?.addEventListener('click', (e) => {
       const icon = row.querySelector('.td-pri-icon');
       const iconRect = icon ? icon.getBoundingClientRect() : rowRect;
       const arrowLeft = (iconRect.left - displayRect.left) + (iconRect.width / 2) - 5;
-      arrow.style.left = arrowLeft + 'px';
       // Position tooltip so arrow area is visible
       const tipLeft = Math.max(0, arrowLeft - 20);
       tip.style.left = tipLeft + 'px';
+      // Arrow position relative to tooltip, not display
+      arrow.style.left = (arrowLeft - tipLeft) + 'px';
       tip.classList.add('show');
     }, 350);
   });
