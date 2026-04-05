@@ -65,13 +65,27 @@
   .task-display {
     flex: 1;
     max-width: 520px;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 14px;
+    background: rgba(236, 234, 228, 0.45);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(212, 208, 200, 0.4);
+    border-radius: 18px;
     padding: 24px 24px;
     display: flex;
     align-items: center;
     overflow: hidden;
+    box-shadow:
+      6px 6px 14px rgba(0, 0, 0, 0.06),
+      -4px -4px 10px rgba(255, 255, 255, 0.7),
+      inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  }
+  :root.dark .task-display {
+    background: rgba(34, 33, 32, 0.4);
+    border: 1px solid rgba(58, 56, 53, 0.35);
+    box-shadow:
+      6px 6px 14px rgba(0, 0, 0, 0.3),
+      -4px -4px 10px rgba(255, 255, 255, 0.03),
+      inset 0 1px 0 rgba(255, 255, 255, 0.05);
   }
   .task-display-inner {
     width: 100%;
@@ -113,7 +127,7 @@
   .task-display-item.pri-2 .td-text { color: var(--text); }
   .task-display-sep {
     width: 1px; height: 24px;
-    background: var(--border);
+    background: rgba(136, 133, 128, 0.25);
     flex-shrink: 0;
   }
 
