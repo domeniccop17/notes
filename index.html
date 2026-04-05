@@ -3429,18 +3429,20 @@ Promise.all([
         // Transcribe via Whisper
         const formData = new FormData();
         formData.append('audio', blob, 'recording.webm');
+        console.log('[smart-rec] sending audio to Whisper, size:', blob.size);
         fetch('https://notes-polish.dcop14c.workers.dev/transcribe', {
           method: 'POST',
           body: formData,
           signal: AbortSignal.timeout(30000),
         })
-          .then(r => r.ok ? r.json() : Promise.reject())
+          .then(r => { console.log('[smart-rec] whisper status:', r.status); return r.ok ? r.json() : r.json().then(e => Promise.reject(e)); })
           .then(data => {
+            console.log('[smart-rec] whisper result:', data);
             const text = (data.text || '').trim();
             if (!text) { btn.classList.remove('processing'); return; }
             processSmartCommand(text, btn, savedSelRange, selectedText, selTA);
           })
-          .catch(() => btn.classList.remove('processing'));
+          .catch(err => { console.error('[smart-rec] error:', err); btn.classList.remove('processing'); });
       };
 
       chunks.length = 0;
@@ -3451,9 +3453,6 @@ Promise.all([
   });
 
   function processSmartCommand(text, btn, savedSelRange, selectedText, selTA) {
-      snapshotForUndo();
-
-      btn.classList.add('processing');
       snapshotForUndo();
 
       // ── SELECTION MODE: edit only selected text, no notebook/note creation ──
