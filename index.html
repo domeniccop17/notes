@@ -49,6 +49,8 @@
     border-bottom: 1px solid var(--border);
     flex-shrink: 0;
     gap: 14px;
+    position: relative;
+    z-index: 100;
   }
   header > div { display: flex; align-items: center; }
 
@@ -186,16 +188,15 @@
     opacity: 1;
     transform: translateY(0);
   }
-  #dashTooltip::before {
-    content: '';
+  #dashTooltipArrow {
     position: absolute;
     top: -5px;
-    left: 24px;
     width: 10px;
     height: 10px;
     background: var(--text);
     transform: rotate(45deg);
     border-radius: 2px;
+    transition: left 0.2s ease;
   }
 
   /* Notebook source label */
@@ -1190,7 +1191,7 @@
     <div class="task-display-inner" id="taskDisplayInner">
       <span class="task-display-empty">No tasks</span>
     </div>
-    <div id="dashTooltip"></div>
+    <div id="dashTooltip"><div id="dashTooltipArrow"></div><span id="dashTooltipText"></span></div>
   </div>
   <div class="header-actions">
     <button class="btn icon-btn" id="darkModeBtn" title="Toggle dark mode">☀️</button>
@@ -3698,7 +3699,9 @@ document.getElementById('taskDisplay')?.addEventListener('click', (e) => {
 (function() {
   const display = document.getElementById('taskDisplay');
   const tip = document.getElementById('dashTooltip');
-  if (!display || !tip) return;
+  const arrow = document.getElementById('dashTooltipArrow');
+  const tipText = document.getElementById('dashTooltipText');
+  if (!display || !tip || !arrow || !tipText) return;
   let hoverTimer = null;
   display.addEventListener('mouseover', (e) => {
     const row = e.target.closest('.td-task-row');
@@ -3707,7 +3710,15 @@ document.getElementById('taskDisplay')?.addEventListener('click', (e) => {
     if (!full) return;
     clearTimeout(hoverTimer);
     hoverTimer = setTimeout(() => {
-      tip.textContent = full;
+      tipText.textContent = full;
+      // Position arrow to point at the start of hovered task row
+      const displayRect = display.getBoundingClientRect();
+      const rowRect = row.getBoundingClientRect();
+      const arrowLeft = (rowRect.left - displayRect.left) + 16;
+      arrow.style.left = arrowLeft + 'px';
+      // Position tooltip so arrow area is visible
+      const tipLeft = Math.max(0, arrowLeft - 20);
+      tip.style.left = tipLeft + 'px';
       tip.classList.add('show');
     }, 350);
   });
