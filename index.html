@@ -879,6 +879,9 @@
   .note-textarea .checklist-item[data-priority="3"]::before {
     background: #e05c4a;
   }
+  .note-textarea .checklist-item.checked::before {
+    display: none;
+  }
 
   /* PRIORITY CONTEXT MENU */
   .priority-menu {
@@ -2487,7 +2490,7 @@ function renderPanel(nbId, gridEl, titleEl, countEl) {
           if (e.target.checked) {
             e.target.setAttribute('checked', '');
             item.setAttribute('data-checked-at', Date.now());
-            item.setAttribute('data-priority', '0');
+            item.removeAttribute('data-priority');
             // Move to end of checklist after a short delay (so user sees the check animation)
             setTimeout(() => {
               // Find the last checklist item in the textarea
