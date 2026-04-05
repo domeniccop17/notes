@@ -3556,7 +3556,8 @@ function collectDashTasks() {
       });
     });
   }
-  tasks.sort((a, b) => b.score - a.score);
+  // Sort by priority first (red > orange > grey), then by age within same priority
+  tasks.sort((a, b) => b.pri - a.pri || b.score - a.score);
   return tasks;
 }
 
