@@ -3835,11 +3835,18 @@ function buildTaskRowHtml(task) {
   return html;
 }
 
-function renderDashSlides() {
+function renderDashSlides(forceRebuild) {
   const inner = document.getElementById('taskDisplayInner');
   if (!inner) return;
 
-  _dashTasks = collectDashTasks();
+  const newTasks = collectDashTasks();
+
+  // Only rebuild DOM if task list actually changed
+  const newKey = newTasks.map(t => t.text + t.pri + t.nbId).join('|');
+  const oldKey = _dashTasks.map(t => t.text + t.pri + t.nbId).join('|');
+  if (!forceRebuild && newKey === oldKey && inner.querySelector('.td-pair')) return;
+
+  _dashTasks = newTasks;
 
   if (!_dashTasks.length) {
     const msg = MOTIVATIONAL[Math.floor(Math.random() * MOTIVATIONAL.length)];
@@ -3870,6 +3877,7 @@ function renderDashSlides() {
 
   // Start carousel if more than 1 pair
   if (_dashCarouselTimer) clearInterval(_dashCarouselTimer);
+  _dashCarouselTimer = null;
   if (pairs.length > 1) {
     _dashCarouselTimer = setInterval(advanceDashSlide, 6000);
   }
@@ -3908,7 +3916,7 @@ function flashDashDone() {
   flash.classList.add('show');
   setTimeout(() => {
     flash.classList.remove('show');
-    setTimeout(renderDashSlides, 300);
+    setTimeout(() => renderDashSlides(true), 300);
   }, 1200);
 }
 
