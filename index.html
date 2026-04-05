@@ -65,21 +65,21 @@
   .task-display {
     flex: 1;
     max-width: 520px;
-    background: rgba(236, 234, 228, 0.45);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-    border: 1px solid rgba(212, 208, 200, 0.4);
+    background: var(--bg);
+    border: none;
     border-radius: 18px;
     padding: 24px 24px;
     display: flex;
     align-items: center;
     overflow: hidden;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+    box-shadow:
+      6px 6px 14px rgba(0, 0, 0, 0.08),
+      -6px -6px 14px rgba(255, 255, 255, 0.8);
   }
   :root.dark .task-display {
-    background: rgba(34, 33, 32, 0.4);
-    border: 1px solid rgba(58, 56, 53, 0.35);
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+    box-shadow:
+      6px 6px 14px rgba(0, 0, 0, 0.4),
+      -6px -6px 14px rgba(255, 255, 255, 0.04);
   }
   .task-display-inner {
     width: 100%;
