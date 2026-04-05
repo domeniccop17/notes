@@ -59,6 +59,70 @@
     text-transform: uppercase;
   }
 
+  /* TASK DISPLAY */
+  .task-display {
+    flex: 1;
+    max-width: 420px;
+    margin: 0 20px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 6px 14px;
+    min-height: 32px;
+    display: flex;
+    align-items: center;
+    overflow: hidden;
+    position: relative;
+  }
+  .task-display-inner {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .task-display-empty {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    opacity: 0.5;
+    letter-spacing: 0.03em;
+  }
+  .task-display-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    line-height: 1.5;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .task-display-item .td-dot {
+    width: 5px; height: 5px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .task-display-item .td-dot.p3 { background: #e05c4a; }
+  .task-display-item .td-dot.p2 { background: #e8a030; }
+  .task-display-item .td-dot.p1 { background: #888; }
+  .task-display-item .td-text {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex: 1;
+  }
+  .task-display-item.pri-3 .td-text { font-weight: 600; }
+  .task-display-item.pri-2 .td-text { font-weight: 500; }
+  .task-display-fade {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 10px;
+    background: linear-gradient(transparent, var(--surface));
+    pointer-events: none;
+    border-radius: 0 0 10px 10px;
+  }
+
   .header-actions {
     display: flex;
     gap: 8px;
@@ -220,50 +284,6 @@
     padding: 1px 5px;
     border-radius: 8px;
     min-width: auto;
-  }
-
-  /* AI REMINDER BANNER */
-  .reminder-banner {
-    display: none;
-    padding: 8px 16px;
-    border-bottom: 1px solid var(--border);
-    background: var(--surface);
-    font-family: 'DM Mono', monospace;
-    font-size: 11px;
-    line-height: 1.6;
-    color: var(--text);
-    flex-shrink: 0;
-    gap: 8px;
-    align-items: flex-start;
-  }
-  .reminder-banner.visible { display: flex; }
-  .reminder-banner .reminder-icon {
-    flex-shrink: 0;
-    font-size: 12px;
-    margin-top: 1px;
-  }
-  .reminder-banner .reminder-text {
-    flex: 1;
-    min-width: 0;
-  }
-  .reminder-banner .reminder-close {
-    background: none; border: none; cursor: pointer;
-    color: var(--muted); font-size: 12px; padding: 0 2px;
-    flex-shrink: 0; line-height: 1;
-  }
-  .reminder-banner .reminder-close:hover { color: var(--text); }
-  .reminder-btn {
-    background: none; border: none; cursor: pointer;
-    font-size: 11px; padding: 2px 6px;
-    color: var(--muted); border-radius: 4px;
-    font-family: 'DM Mono', monospace;
-    letter-spacing: 0.03em;
-    transition: color 0.15s, background 0.15s;
-  }
-  .reminder-btn:hover { color: var(--text); background: var(--tag-bg); }
-  .reminder-btn.loading {
-    opacity: 0.6;
-    animation: suggestPulse 0.8s ease-in-out infinite;
   }
 
   /* Progress bar in panel header (for TODO + active notebooks) */
@@ -1040,6 +1060,11 @@
     <span class="logo">notes</span>
     <button class="smart-record-btn" id="smartRecordBtn" title="Smart record (Alt+R)">● Record</button>
   </div>
+  <div class="task-display" id="taskDisplay">
+    <div class="task-display-inner" id="taskDisplayInner">
+      <span class="task-display-empty">No tasks</span>
+    </div>
+  </div>
   <div class="header-actions">
     <button class="btn icon-btn" id="darkModeBtn" title="Toggle dark mode">☀️</button>
     <button class="btn" id="addNotebookBtn">+ notebook</button>
@@ -1062,15 +1087,7 @@
       <div class="notes-title">
         <span id="activeNotebookTitle"></span>
       </div>
-      <div style="display:flex;align-items:center;gap:8px">
-        <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted)" id="noteCountLabel"></div>
-        <button class="reminder-btn" id="reminderBtn" title="AI task reminder">💡</button>
-      </div>
-    </div>
-    <div class="reminder-banner" id="reminderBanner">
-      <span class="reminder-icon">💡</span>
-      <span class="reminder-text" id="reminderText"></span>
-      <button class="reminder-close" id="reminderClose" title="Dismiss">✕</button>
+      <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted)" id="noteCountLabel"></div>
     </div>
     <div class="notes-grid" id="notesGrid"></div>
   </div>
@@ -1320,60 +1337,6 @@ document.getElementById('darkModeBtn').addEventListener('click', () => {
 });
 
 applyDarkMode();
-
-// — AI REMINDER ———————————————————————————
-const reminderBtn = document.getElementById('reminderBtn');
-const reminderBanner = document.getElementById('reminderBanner');
-const reminderText = document.getElementById('reminderText');
-document.getElementById('reminderClose').addEventListener('click', () => {
-  reminderBanner.classList.remove('visible');
-});
-
-reminderBtn.addEventListener('click', async () => {
-  if (reminderBtn.classList.contains('loading')) return;
-  const st = typeof state !== 'undefined' ? state : null;
-  if (!st || !st.activeNotebook) return;
-  const notes = st.notes[st.activeNotebook] || [];
-  // Build task list with priorities
-  let taskList = '';
-  let hasAny = false;
-  notes.forEach((note, ni) => {
-    const d = document.createElement('div');
-    d.innerHTML = note.text || '';
-    d.querySelectorAll('.checklist-item').forEach(item => {
-      if (item.classList.contains('checked')) return;
-      const span = item.querySelector('span');
-      const t = span ? span.textContent.replace(/[\u200B\u00A0\uFEFF]/g, '').trim() : '';
-      if (!t || !/\w/.test(t)) return;
-      const pri = item.getAttribute('data-priority') || '0';
-      const label = pri === '3' ? '🔴 HIGH' : pri === '2' ? '🟠 MEDIUM' : '⚪ LOW';
-      taskList += `[${label}] ${t}\n`;
-      hasAny = true;
-    });
-  });
-  if (!hasAny) {
-    reminderText.textContent = 'No open tasks to remind you about.';
-    reminderBanner.classList.add('visible');
-    return;
-  }
-  reminderBtn.classList.add('loading');
-  try {
-    const res = await fetch('https://notes-polish.dcop14c.workers.dev', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text: taskList, mode: 'reminder' }),
-    });
-    const data = await res.json();
-    reminderText.textContent = data.reminder || 'Could not generate reminder.';
-    reminderBanner.classList.add('visible');
-  } catch (err) {
-    console.error('Reminder error:', err);
-    reminderText.textContent = 'Failed to generate reminder.';
-    reminderBanner.classList.add('visible');
-  } finally {
-    reminderBtn.classList.remove('loading');
-  }
-});
 
 // — STATE ———————————————————————————————
 let state = loadState() || {
@@ -3414,7 +3377,58 @@ Promise.all([
 function render() {
   renderSidebar();
   renderNotes();
+  updateTaskDisplay();
 }
+
+// — LIVE TASK DISPLAY ———————————————————
+function updateTaskDisplay() {
+  const inner = document.getElementById('taskDisplayInner');
+  if (!inner) return;
+
+  // Collect all unchecked tasks across ALL notebooks
+  const tasks = [];
+  for (const nbId of Object.keys(state.notes)) {
+    const nb = state.notebooks.find(n => n.id === nbId);
+    const nbName = nb ? nb.name : '';
+    (state.notes[nbId] || []).forEach(note => {
+      if (!note.text) return;
+      const d = document.createElement('div');
+      d.innerHTML = note.text;
+      d.querySelectorAll('.checklist-item').forEach(item => {
+        if (item.classList.contains('checked')) return;
+        const span = item.querySelector('span');
+        const t = span ? span.textContent.replace(/[\u200B\u00A0\uFEFF]/g, '').trim() : '';
+        if (!t || !/\w/.test(t)) return;
+        const pri = parseInt(item.getAttribute('data-priority') || '0') || 0;
+        tasks.push({ text: t, pri, nb: nbName });
+      });
+    });
+  }
+
+  // Sort by priority: 3 (high) first, then 2 (medium), then rest
+  tasks.sort((a, b) => b.pri - a.pri);
+
+  // Show top 4
+  const show = tasks.slice(0, 4);
+  if (!show.length) {
+    inner.innerHTML = '<span class="task-display-empty">All clear — no open tasks</span>';
+    return;
+  }
+
+  inner.innerHTML = show.map(t => {
+    const dotClass = t.pri >= 3 ? 'p3' : t.pri === 2 ? 'p2' : 'p1';
+    const priClass = t.pri >= 3 ? 'pri-3' : t.pri === 2 ? 'pri-2' : '';
+    return `<div class="task-display-item ${priClass}"><span class="td-dot ${dotClass}"></span><span class="td-text">${t.text}</span></div>`;
+  }).join('');
+
+  // Add remaining count if needed
+  if (tasks.length > 4) {
+    inner.innerHTML += `<div class="task-display-item"><span class="td-dot p1"></span><span class="td-text" style="opacity:0.5">+${tasks.length - 4} more</span></div>`;
+  }
+}
+
+// Auto-refresh every 30s
+setInterval(updateTaskDisplay, 30000);
 
 render();
 </script>
