@@ -122,13 +122,13 @@
 
   /* Single task row within a pair */
   .td-task-row {
-    flex: 1;
+    flex: 1 1 0;
     display: flex;
     align-items: center;
     gap: 8px;
     overflow: hidden;
     padding: 0 4px;
-    min-width: 0;
+    min-width: 60px;
   }
   .td-pair-sep {
     width: 1.5px;
@@ -179,7 +179,7 @@
     word-break: break-word;
     opacity: 0;
     transform: translateY(-4px);
-    transition: opacity 0.2s ease, transform 0.2s ease;
+    transition: opacity 0.1s ease, transform 0.1s ease;
     pointer-events: none;
     z-index: 99999;
     box-shadow: 0 4px 16px rgba(0,0,0,0.15);
@@ -3726,7 +3726,7 @@ function buildTaskRowHtml(task) {
   let html = `<div class="td-task-row" data-nb-id="${task.nbId}" data-note-idx="${task.noteIdx}" data-full-text="${escaped}">`;
   html += `<span class="td-pri-icon">${icon}</span>`;
   html += `<span class="td-task-text">${task.text}</span>`;
-  if (!task.isTodo && task.nb) {
+  if (task.nb) {
     html += `<span class="td-nb-label"><span class="td-nb-dot" style="background:${task.nbColor}"></span>${task.nb}</span>`;
   }
   html += `</div>`;
@@ -3882,7 +3882,7 @@ document.getElementById('taskDisplay')?.addEventListener('click', (e) => {
       // Arrow position relative to tooltip, not display
       arrow.style.left = (arrowLeft - tipLeft) + 'px';
       tip.classList.add('show');
-    }, 350);
+    }, 0);
   });
   display.addEventListener('mouseout', (e) => {
     const row = e.target.closest('.td-task-row');
