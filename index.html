@@ -2741,10 +2741,9 @@ function renderPanel(nbId, gridEl, titleEl, countEl) {
         .finally(() => listBtn.classList.remove('processing'));
     });
 
-    // mic / speech-to-text
+    // mic / speech-to-text (Whisper)
     const micBtn = card.querySelector('.note-mic-btn');
-    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SR) { micBtn.style.display = 'none'; } else {
+    if (!navigator.mediaDevices?.getUserMedia) { micBtn.style.display = 'none'; } else {
       micBtn.addEventListener('click', e => {
         e.stopPropagation();
         if (micBtn.classList.contains('polishing')) return;
@@ -2757,9 +2756,9 @@ function renderPanel(nbId, gridEl, titleEl, countEl) {
         const savedCursorRange = hasCursor ? sel.getRangeAt(0).cloneRange() : null;
         const selectedText = hasSelection ? sel.toString().trim() : '';
 
-        // — stop active recording, polish accumulated transcript —
+        // — stop active recording —
         if (window._activeRec && window._activeMicBtn === micBtn) {
-          window._activeRec.stop(); // triggers onend → polishes
+          window._activeRec.stop();
           return;
         }
         if (window._activeRec) {
@@ -2769,115 +2768,129 @@ function renderPanel(nbId, gridEl, titleEl, countEl) {
         }
         // Cancel smart record if active
         if (window._smartRec) {
-          window._smartRec.onend = () => {};
+          window._smartRec.onstop = () => {};
           window._smartRec.stop();
           window._smartRec = null;
           document.getElementById('smartRecordBtn').classList.remove('recording');
         }
 
-        const rec = new SR();
-        rec.continuous = true;
-        rec.interimResults = true;
-        rec.lang = 'fr-FR';
-        rec.maxAlternatives = 3;
-        let transcript = '';
-        let silenceTimer = null;
+        navigator.mediaDevices.getUserMedia({
+          audio: { noiseSuppression: true, autoGainControl: true, echoCancellation: true }
+        }).then(stream => {
+          const audioCtx = new AudioContext();
+          const source = audioCtx.createMediaStreamSource(stream);
+          const analyser = audioCtx.createAnalyser();
+          analyser.fftSize = 512;
+          source.connect(analyser);
+          const dataArr = new Uint8Array(analyser.frequencyBinCount);
 
-        const resetSilenceTimer = () => {
-          clearTimeout(silenceTimer);
-          silenceTimer = setTimeout(() => { if (window._activeRec === rec) rec.stop(); }, 800);
-        };
+          const recorder = new MediaRecorder(stream, { mimeType: MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus' : 'audio/webm' });
+          const chunks = [];
+          recorder.ondataavailable = ev => { if (ev.data.size > 0) chunks.push(ev.data); };
 
-        rec.onresult = ev => {
-          for (let i = ev.resultIndex; i < ev.results.length; i++) {
-            if (ev.results[i].isFinal) {
-              let best = ev.results[i][0];
-              for (let a = 1; a < ev.results[i].length; a++) {
-                if (ev.results[i][a].confidence > best.confidence) best = ev.results[i][a];
-              }
-              transcript += best.transcript + ' ';
+          // Voice activity detection
+          let speechDetected = false;
+          let silenceStart = null;
+          const vadCheck = setInterval(() => {
+            analyser.getByteFrequencyData(dataArr);
+            const avg = dataArr.reduce((a, b) => a + b, 0) / dataArr.length;
+            if (avg > 15) { speechDetected = true; silenceStart = null; }
+            else if (speechDetected) {
+              if (!silenceStart) silenceStart = Date.now();
+              else if (Date.now() - silenceStart > 1200) recorder.stop();
             }
-          }
-          resetSilenceTimer();
-        };
+          }, 100);
 
-        rec.onend = () => {
-          clearTimeout(silenceTimer);
-          micBtn.classList.remove('recording');
-          card.classList.remove('mic-active');
-          window._activeRec = null; window._activeMicBtn = null;
-          const text = transcript.trim();
-          if (!text) return;
-          micBtn.classList.add('polishing');
-          snapshotForUndo();
+          recorder.onstop = () => {
+            clearInterval(vadCheck);
+            stream.getTracks().forEach(t => t.stop());
+            audioCtx.close();
+            micBtn.classList.remove('recording');
+            card.classList.remove('mic-active');
+            window._activeRec = null; window._activeMicBtn = null;
 
-          const currentContent = ta.innerHTML.trim();
-          const hasContent = currentContent && currentContent !== '<br>';
+            if (chunks.length === 0) return;
+            const blob = new Blob(chunks, { type: recorder.mimeType });
+            if (blob.size < 1000) return;
 
-          if (savedSelRange) {
-            // Selection mode → AI edit only the selected portion
-            fetch('https://notes-polish.dcop14c.workers.dev', {
+            micBtn.classList.add('polishing');
+            snapshotForUndo();
+
+            // Transcribe via Whisper then process
+            const formData = new FormData();
+            formData.append('audio', blob, 'recording.webm');
+            fetch('https://notes-polish.dcop14c.workers.dev/transcribe', {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ text, mode: 'note-edit', noteContent: selectedText }),
-              signal: AbortSignal.timeout(20000),
+              body: formData,
+              signal: AbortSignal.timeout(30000),
             })
               .then(r => r.ok ? r.json() : Promise.reject())
               .then(data => {
-                if (data.content) {
-                  const s = window.getSelection();
-                  s.removeAllRanges();
-                  s.addRange(savedSelRange);
-                  document.execCommand('insertHTML', false, data.content);
-                  note.text = ta.innerHTML;
-                  debounceSave();
+                const text = (data.text || '').trim();
+                if (!text) { micBtn.classList.remove('polishing'); return; }
+
+                if (savedSelRange) {
+                  // Selection mode → AI edit only the selected portion
+                  fetch('https://notes-polish.dcop14c.workers.dev', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text, mode: 'note-edit', noteContent: selectedText }),
+                    signal: AbortSignal.timeout(20000),
+                  })
+                    .then(r => r.ok ? r.json() : Promise.reject())
+                    .then(data => {
+                      if (data.content) {
+                        const s = window.getSelection();
+                        s.removeAllRanges();
+                        s.addRange(savedSelRange);
+                        document.execCommand('insertHTML', false, data.content);
+                        note.text = ta.innerHTML;
+                        debounceSave();
+                      }
+                    })
+                    .catch(() => {
+                      const s = window.getSelection();
+                      s.removeAllRanges();
+                      s.addRange(savedSelRange);
+                      document.execCommand('insertText', false, text + ' ');
+                      note.text = ta.innerHTML;
+                      debounceSave();
+                    })
+                    .finally(() => micBtn.classList.remove('polishing'));
+                } else {
+                  // No selection → polish transcript and insert at cursor
+                  const insertAtCursor = str => {
+                    ta.focus();
+                    if (savedCursorRange) {
+                      const s = window.getSelection();
+                      s.removeAllRanges();
+                      s.addRange(savedCursorRange);
+                    }
+                    document.execCommand('insertText', false, str + ' ');
+                    note.text = ta.innerHTML;
+                    debounceSave();
+                  };
+                  fetch('https://notes-polish.dcop14c.workers.dev', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text }),
+                    signal: AbortSignal.timeout(15000),
+                  })
+                    .then(r => r.ok ? r.json() : Promise.reject())
+                    .then(data => insertAtCursor(data.polished || text))
+                    .catch(() => insertAtCursor(text))
+                    .finally(() => micBtn.classList.remove('polishing'));
                 }
               })
-              .catch(() => {
-                const s = window.getSelection();
-                s.removeAllRanges();
-                s.addRange(savedSelRange);
-                document.execCommand('insertText', false, text + ' ');
-                note.text = ta.innerHTML;
-                debounceSave();
-              })
-              .finally(() => micBtn.classList.remove('polishing'));
-          } else {
-            // No selection → polish transcript and insert at cursor position
-            const insertAtCursor = str => {
-              ta.focus();
-              if (savedCursorRange) {
-                const s = window.getSelection();
-                s.removeAllRanges();
-                s.addRange(savedCursorRange);
-              }
-              document.execCommand('insertText', false, str + ' ');
-              note.text = ta.innerHTML;
-              debounceSave();
-            };
-            fetch('https://notes-polish.dcop14c.workers.dev', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ text }),
-              signal: AbortSignal.timeout(15000),
-            })
-              .then(r => r.ok ? r.json() : Promise.reject())
-              .then(data => insertAtCursor(data.polished || text))
-              .catch(() => insertAtCursor(text))
-              .finally(() => micBtn.classList.remove('polishing'));
-          }
-        };
-        rec.onerror = () => {
-          micBtn.classList.remove('recording');
-          card.classList.remove('mic-active');
-          window._activeRec = null; window._activeMicBtn = null;
-        };
+              .catch(() => micBtn.classList.remove('polishing'));
+          };
 
-        transcript = '';
-        micBtn.classList.add('recording');
-        card.classList.add('mic-active');
-        window._activeRec = rec; window._activeMicBtn = micBtn;
-        rec.start();
+          chunks.length = 0;
+          micBtn.classList.add('recording');
+          card.classList.add('mic-active');
+          window._activeRec = recorder; window._activeMicBtn = micBtn;
+          recorder.start();
+        }).catch(() => {});
       });
     }
 
@@ -3338,21 +3351,10 @@ Promise.all([
   document.getElementById('lastUpdated').textContent = 'updated ' + fmt;
 }).catch(() => {});
 
-// — SMART RECORD —————————————————————————
+// — SMART RECORD (Whisper) ————————————————
 (function() {
   const btn = document.getElementById('smartRecordBtn');
-  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (!SR) { btn.style.display = 'none'; return; }
-
-  // Activate browser-level noise suppression once
-  let _micStreamReady = false;
-  navigator.mediaDevices?.getUserMedia({
-    audio: { noiseSuppression: true, autoGainControl: true, echoCancellation: true }
-  }).then(stream => {
-    _micStreamReady = true;
-    // Keep stream alive so browser noise filters stay active
-    window._noiseSuppressedStream = stream;
-  }).catch(() => {});
+  if (!navigator.mediaDevices?.getUserMedia) { btn.style.display = 'none'; return; }
 
   btn.addEventListener('click', () => {
     if (btn.classList.contains('processing')) return;
@@ -3378,39 +3380,78 @@ Promise.all([
     const selectedText = hasSelection ? sel.toString().trim() : '';
     const selTA = selAnchorTA;
 
-    const rec = new SR();
-    rec.continuous = true;
-    rec.interimResults = true;
-    rec.lang = 'fr-FR';
-    rec.maxAlternatives = 3;
-    let transcript = '';
-    let silenceTimer = null;
+    navigator.mediaDevices.getUserMedia({
+      audio: { noiseSuppression: true, autoGainControl: true, echoCancellation: true }
+    }).then(stream => {
+      const audioCtx = new AudioContext();
+      const source = audioCtx.createMediaStreamSource(stream);
+      const analyser = audioCtx.createAnalyser();
+      analyser.fftSize = 512;
+      source.connect(analyser);
+      const dataArr = new Uint8Array(analyser.frequencyBinCount);
 
-    const resetSilenceTimer = () => {
-      clearTimeout(silenceTimer);
-      silenceTimer = setTimeout(() => { if (window._smartRec === rec) rec.stop(); }, 800);
-    };
+      const recorder = new MediaRecorder(stream, { mimeType: MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus' : 'audio/webm' });
+      const chunks = [];
+      recorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
 
-    rec.onresult = ev => {
-      for (let i = ev.resultIndex; i < ev.results.length; i++) {
-        if (ev.results[i].isFinal) {
-          // Pick the highest-confidence alternative
-          let best = ev.results[i][0];
-          for (let a = 1; a < ev.results[i].length; a++) {
-            if (ev.results[i][a].confidence > best.confidence) best = ev.results[i][a];
+      // Voice activity detection: auto-stop after 1.2s of silence following speech
+      let speechDetected = false;
+      let silenceStart = null;
+      const SILENCE_THRESHOLD = 15;
+      const SILENCE_DURATION = 1200;
+      const vadCheck = setInterval(() => {
+        analyser.getByteFrequencyData(dataArr);
+        const avg = dataArr.reduce((a, b) => a + b, 0) / dataArr.length;
+        if (avg > SILENCE_THRESHOLD) {
+          speechDetected = true;
+          silenceStart = null;
+        } else if (speechDetected) {
+          if (!silenceStart) silenceStart = Date.now();
+          else if (Date.now() - silenceStart > SILENCE_DURATION) {
+            recorder.stop();
           }
-          transcript += best.transcript + ' ';
         }
-      }
-      resetSilenceTimer();
-    };
+      }, 100);
 
-    rec.onend = () => {
-      clearTimeout(silenceTimer);
-      btn.classList.remove('recording');
-      window._smartRec = null;
-      const text = transcript.trim();
-      if (!text) return;
+      recorder.onstop = () => {
+        clearInterval(vadCheck);
+        stream.getTracks().forEach(t => t.stop());
+        audioCtx.close();
+        btn.classList.remove('recording');
+        window._smartRec = null;
+
+        if (chunks.length === 0) return;
+        const blob = new Blob(chunks, { type: recorder.mimeType });
+        if (blob.size < 1000) return; // too short
+
+        btn.classList.add('processing');
+
+        // Transcribe via Whisper
+        const formData = new FormData();
+        formData.append('audio', blob, 'recording.webm');
+        fetch('https://notes-polish.dcop14c.workers.dev/transcribe', {
+          method: 'POST',
+          body: formData,
+          signal: AbortSignal.timeout(30000),
+        })
+          .then(r => r.ok ? r.json() : Promise.reject())
+          .then(data => {
+            const text = (data.text || '').trim();
+            if (!text) { btn.classList.remove('processing'); return; }
+            processSmartCommand(text, btn, savedSelRange, selectedText, selTA);
+          })
+          .catch(() => btn.classList.remove('processing'));
+      };
+
+      chunks.length = 0;
+      btn.classList.add('recording');
+      window._smartRec = recorder;
+      recorder.start();
+    }).catch(() => {});
+  });
+
+  function processSmartCommand(text, btn, savedSelRange, selectedText, selTA) {
+      snapshotForUndo();
 
       btn.classList.add('processing');
       snapshotForUndo();
@@ -3672,18 +3713,7 @@ Promise.all([
           render();
         })
         .finally(() => btn.classList.remove('processing'));
-    };
-
-    rec.onerror = () => {
-      btn.classList.remove('recording');
-      window._smartRec = null;
-    };
-
-    transcript = '';
-    btn.classList.add('recording');
-    window._smartRec = rec;
-    rec.start();
-  });
+  }
 })();
 
 // — MAIN RENDER ——————————————————————————
