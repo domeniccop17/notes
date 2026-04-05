@@ -45,10 +45,10 @@
     display: flex;
     align-items: stretch;
     justify-content: space-between;
-    padding: 6px 18px;
+    padding: 12px 18px;
     border-bottom: 1px solid var(--border);
     flex-shrink: 0;
-    gap: 12px;
+    gap: 14px;
   }
   header > div { display: flex; align-items: center; }
 
@@ -64,11 +64,11 @@
   /* TASK DISPLAY */
   .task-display {
     flex: 1;
-    max-width: 480px;
+    max-width: 520px;
     background: var(--surface);
     border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 4px 12px;
+    border-radius: 10px;
+    padding: 6px 16px;
     display: flex;
     align-items: center;
     overflow: hidden;
@@ -77,34 +77,34 @@
     width: 100%;
     display: flex;
     align-items: center;
-    gap: 14px;
+    gap: 16px;
     overflow: hidden;
   }
   .task-display-empty {
     font-family: 'DM Sans', sans-serif;
-    font-size: 11px;
+    font-size: 13px;
     color: var(--muted);
     opacity: 0.4;
   }
   .task-display-item {
     display: flex;
     align-items: center;
-    gap: 5px;
+    gap: 7px;
     white-space: nowrap;
     flex-shrink: 0;
-    max-width: 200px;
+    max-width: 240px;
   }
   .task-display-item .td-dot {
-    width: 6px; height: 6px;
+    width: 7px; height: 7px;
     border-radius: 50%;
     flex-shrink: 0;
   }
-  .task-display-item .td-dot.p3 { background: #e05c4a; box-shadow: 0 0 4px rgba(224,92,74,0.4); }
-  .task-display-item .td-dot.p2 { background: #e8a030; box-shadow: 0 0 4px rgba(232,160,48,0.3); }
+  .task-display-item .td-dot.p3 { background: #e05c4a; box-shadow: 0 0 5px rgba(224,92,74,0.4); }
+  .task-display-item .td-dot.p2 { background: #e8a030; box-shadow: 0 0 5px rgba(232,160,48,0.3); }
   .task-display-item .td-dot.p1 { background: #aaa; }
   .task-display-item .td-text {
     font-family: 'DM Sans', sans-serif;
-    font-size: 11px;
+    font-size: 13px;
     color: var(--text);
     overflow: hidden;
     text-overflow: ellipsis;
@@ -114,7 +114,7 @@
   .task-display-item.pri-2 .td-text { font-weight: 500; color: #c08020; }
   :root.dark .task-display-item.pri-2 .td-text { color: #e8a030; }
   .task-display-sep {
-    width: 1px; height: 12px;
+    width: 1px; height: 14px;
     background: var(--border);
     flex-shrink: 0;
   }
@@ -3414,14 +3414,13 @@ function updateTaskDisplay() {
   const med = tasks.filter(t => t.pri === 2);
   const low = tasks.filter(t => t.pri < 2);
 
-  // Pick tasks to show: all high, then medium, then random low to fill ~3 slots
+  // Pick tasks to show: high first, then medium, then random low — max 2
   let show = [...high, ...med];
-  if (show.length < 3) {
-    // Shuffle low tasks for variety
+  if (show.length < 2) {
     const shuffled = low.sort(() => Math.random() - 0.5);
-    show = show.concat(shuffled.slice(0, 3 - show.length));
+    show = show.concat(shuffled.slice(0, 2 - show.length));
   }
-  show = show.slice(0, 3);
+  show = show.slice(0, 2);
 
   const html = show.map((t, i) => {
     const dotClass = t.pri >= 3 ? 'p3' : t.pri === 2 ? 'p2' : 'p1';
