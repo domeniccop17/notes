@@ -222,6 +222,50 @@
     min-width: auto;
   }
 
+  /* AI REMINDER BANNER */
+  .reminder-banner {
+    display: none;
+    padding: 8px 16px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    line-height: 1.6;
+    color: var(--text);
+    flex-shrink: 0;
+    gap: 8px;
+    align-items: flex-start;
+  }
+  .reminder-banner.visible { display: flex; }
+  .reminder-banner .reminder-icon {
+    flex-shrink: 0;
+    font-size: 12px;
+    margin-top: 1px;
+  }
+  .reminder-banner .reminder-text {
+    flex: 1;
+    min-width: 0;
+  }
+  .reminder-banner .reminder-close {
+    background: none; border: none; cursor: pointer;
+    color: var(--muted); font-size: 12px; padding: 0 2px;
+    flex-shrink: 0; line-height: 1;
+  }
+  .reminder-banner .reminder-close:hover { color: var(--text); }
+  .reminder-btn {
+    background: none; border: none; cursor: pointer;
+    font-size: 11px; padding: 2px 6px;
+    color: var(--muted); border-radius: 4px;
+    font-family: 'DM Mono', monospace;
+    letter-spacing: 0.03em;
+    transition: color 0.15s, background 0.15s;
+  }
+  .reminder-btn:hover { color: var(--text); background: var(--tag-bg); }
+  .reminder-btn.loading {
+    opacity: 0.6;
+    animation: suggestPulse 0.8s ease-in-out infinite;
+  }
+
   /* Progress bar in panel header (for TODO + active notebooks) */
   .todo-header-bar {
     width: 100%; height: 4px; background: var(--border);
@@ -1018,7 +1062,15 @@
       <div class="notes-title">
         <span id="activeNotebookTitle"></span>
       </div>
-      <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted)" id="noteCountLabel"></div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted)" id="noteCountLabel"></div>
+        <button class="reminder-btn" id="reminderBtn" title="AI task reminder">💡</button>
+      </div>
+    </div>
+    <div class="reminder-banner" id="reminderBanner">
+      <span class="reminder-icon">💡</span>
+      <span class="reminder-text" id="reminderText"></span>
+      <button class="reminder-close" id="reminderClose" title="Dismiss">✕</button>
     </div>
     <div class="notes-grid" id="notesGrid"></div>
   </div>
@@ -1268,6 +1320,60 @@ document.getElementById('darkModeBtn').addEventListener('click', () => {
 });
 
 applyDarkMode();
+
+// — AI REMINDER ———————————————————————————
+const reminderBtn = document.getElementById('reminderBtn');
+const reminderBanner = document.getElementById('reminderBanner');
+const reminderText = document.getElementById('reminderText');
+document.getElementById('reminderClose').addEventListener('click', () => {
+  reminderBanner.classList.remove('visible');
+});
+
+reminderBtn.addEventListener('click', async () => {
+  if (reminderBtn.classList.contains('loading')) return;
+  const st = typeof state !== 'undefined' ? state : null;
+  if (!st || !st.activeNotebook) return;
+  const notes = st.notes[st.activeNotebook] || [];
+  // Build task list with priorities
+  let taskList = '';
+  let hasAny = false;
+  notes.forEach((note, ni) => {
+    const d = document.createElement('div');
+    d.innerHTML = note.text || '';
+    d.querySelectorAll('.checklist-item').forEach(item => {
+      if (item.classList.contains('checked')) return;
+      const span = item.querySelector('span');
+      const t = span ? span.textContent.replace(/[\u200B\u00A0\uFEFF]/g, '').trim() : '';
+      if (!t || !/\w/.test(t)) return;
+      const pri = item.getAttribute('data-priority') || '0';
+      const label = pri === '3' ? '🔴 HIGH' : pri === '2' ? '🟠 MEDIUM' : '⚪ LOW';
+      taskList += `[${label}] ${t}\n`;
+      hasAny = true;
+    });
+  });
+  if (!hasAny) {
+    reminderText.textContent = 'No open tasks to remind you about.';
+    reminderBanner.classList.add('visible');
+    return;
+  }
+  reminderBtn.classList.add('loading');
+  try {
+    const res = await fetch('https://notes-polish.dcop14c.workers.dev', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text: taskList, mode: 'reminder' }),
+    });
+    const data = await res.json();
+    reminderText.textContent = data.reminder || 'Could not generate reminder.';
+    reminderBanner.classList.add('visible');
+  } catch (err) {
+    console.error('Reminder error:', err);
+    reminderText.textContent = 'Failed to generate reminder.';
+    reminderBanner.classList.add('visible');
+  } finally {
+    reminderBtn.classList.remove('loading');
+  }
+});
 
 // — STATE ———————————————————————————————
 let state = loadState() || {
