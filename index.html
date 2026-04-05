@@ -2648,6 +2648,7 @@ function renderPanel(nbId, gridEl, titleEl, countEl) {
           item.classList.toggle('checked', e.target.checked);
           // Sync checked attribute so innerHTML serialization preserves state
           if (e.target.checked) {
+            _dashJustChecked = true;
             e.target.setAttribute('checked', '');
             item.setAttribute('data-checked-at', Date.now());
             item.removeAttribute('data-priority');
@@ -3779,6 +3780,7 @@ let _dashTasks = [];
 let _dashSlideIdx = 0;
 let _dashCarouselTimer = null;
 let _dashLastChecked = new Set();
+let _dashJustChecked = false;
 
 function collectDashTasks() {
   const tasks = [];
@@ -3947,7 +3949,8 @@ function updateTaskDisplay() {
     for (const id of _dashLastChecked) {
       if (!currentIds.has(id)) { wasCompleted = true; break; }
     }
-    if (wasCompleted) {
+    if (wasCompleted && _dashJustChecked) {
+      _dashJustChecked = false;
       _dashLastChecked = currentIds;
       flashDashDone();
       return;
