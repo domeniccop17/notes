@@ -213,9 +213,9 @@
     letter-spacing: 0.04em;
   }
   .td-nb-dot {
-    width: 5px; height: 5px;
-    border-radius: 50%;
     flex-shrink: 0;
+    font-size: 8px;
+    line-height: 1;
   }
 
   /* Done flash */
@@ -3688,6 +3688,7 @@ function collectDashTasks() {
     if (!nb.active && !isTodoNotebook(nb)) continue;
     const nbName = nb.name;
     const nbColor = nb.color || 'var(--muted)';
+    const nbSymbol = nb.symbol || '●';
     const isTodo = isTodoNotebook(nb);
     (state.notes[nbId] || []).forEach((note, noteIdx) => {
       if (!note.text) return;
@@ -3704,7 +3705,7 @@ function collectDashTasks() {
         const ageBoost = Math.min(ageDays * 0.5, 2);
         tasks.push({
           text: t, pri, score: pri + ageBoost,
-          nb: nbName, nbColor, isTodo, nbId, noteIdx, itemIdx
+          nb: nbName, nbColor, nbSymbol, isTodo, nbId, noteIdx, itemIdx
         });
       });
     });
@@ -3727,7 +3728,7 @@ function buildTaskRowHtml(task) {
   html += `<span class="td-pri-icon">${icon}</span>`;
   html += `<span class="td-task-text">${task.text}</span>`;
   if (task.nb) {
-    html += `<span class="td-nb-label"><span class="td-nb-dot" style="background:${task.nbColor}"></span>${task.nb}</span>`;
+    html += `<span class="td-nb-label"><span class="td-nb-dot" style="color:${task.nbColor}">${task.nbSymbol}</span>${task.nb}</span>`;
   }
   html += `</div>`;
   return html;
