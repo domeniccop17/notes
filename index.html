@@ -2775,54 +2775,73 @@ function renderPanel(nbId, gridEl, titleEl, countEl) {
         }
 
         navigator.mediaDevices.getUserMedia({
-          audio: { noiseSuppression: true, autoGainControl: true, echoCancellation: true }
+          audio: { noiseSuppression: true, autoGainControl: true, echoCancellation: true, sampleRate: 16000 }
         }).then(stream => {
-          const audioCtx = new AudioContext();
+          const audioCtx = new AudioContext({ sampleRate: 16000 });
           const source = audioCtx.createMediaStreamSource(stream);
           const analyser = audioCtx.createAnalyser();
           analyser.fftSize = 512;
           source.connect(analyser);
-          const dataArr = new Uint8Array(analyser.frequencyBinCount);
+          const freqData = new Uint8Array(analyser.frequencyBinCount);
 
-          const recorder = new MediaRecorder(stream, { mimeType: MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus' : 'audio/webm' });
-          const chunks = [];
-          recorder.ondataavailable = ev => { if (ev.data.size > 0) chunks.push(ev.data); };
+          const processor = audioCtx.createScriptProcessor(4096, 1, 1);
+          const pcmChunks = [];
+          processor.onaudioprocess = ev => { pcmChunks.push(new Float32Array(ev.inputBuffer.getChannelData(0))); };
+          source.connect(processor);
+          processor.connect(audioCtx.destination);
 
-          // Voice activity detection
           let speechDetected = false;
           let silenceStart = null;
+          let stopped = false;
           const vadCheck = setInterval(() => {
-            analyser.getByteFrequencyData(dataArr);
-            const avg = dataArr.reduce((a, b) => a + b, 0) / dataArr.length;
+            analyser.getByteFrequencyData(freqData);
+            const avg = freqData.reduce((a, b) => a + b, 0) / freqData.length;
             if (avg > 15) { speechDetected = true; silenceStart = null; }
             else if (speechDetected) {
               if (!silenceStart) silenceStart = Date.now();
-              else if (Date.now() - silenceStart > 1200) recorder.stop();
+              else if (Date.now() - silenceStart > 1200 && !stopped) { stopped = true; finishMicRec(); }
             }
           }, 100);
 
-          recorder.onstop = () => {
+          const stopRec = () => { if (!stopped) { stopped = true; finishMicRec(); } };
+
+          function finishMicRec() {
             clearInterval(vadCheck);
+            processor.disconnect();
+            source.disconnect();
             stream.getTracks().forEach(t => t.stop());
-            audioCtx.close();
             micBtn.classList.remove('recording');
             card.classList.remove('mic-active');
             window._activeRec = null; window._activeMicBtn = null;
 
-            if (chunks.length === 0) return;
-            const blob = new Blob(chunks, { type: recorder.mimeType });
-            if (blob.size < 1000) return;
+            if (pcmChunks.length === 0) { audioCtx.close(); return; }
+            const totalLen = pcmChunks.reduce((s, c) => s + c.length, 0);
+            const pcm = new Float32Array(totalLen);
+            let off = 0;
+            for (const c of pcmChunks) { pcm.set(c, off); off += c.length; }
+            const sr = audioCtx.sampleRate;
+            audioCtx.close();
+
+            const wavBuf = new ArrayBuffer(44 + totalLen * 2);
+            const dv = new DataView(wavBuf);
+            const ws = (o, s) => { for (let i = 0; i < s.length; i++) dv.setUint8(o + i, s.charCodeAt(i)); };
+            ws(0,'RIFF'); dv.setUint32(4,36+totalLen*2,true); ws(8,'WAVE'); ws(12,'fmt ');
+            dv.setUint32(16,16,true); dv.setUint16(20,1,true); dv.setUint16(22,1,true);
+            dv.setUint32(24,sr,true); dv.setUint32(28,sr*2,true); dv.setUint16(32,2,true);
+            dv.setUint16(34,16,true); ws(36,'data'); dv.setUint32(40,totalLen*2,true);
+            for (let i = 0; i < totalLen; i++) {
+              const s = Math.max(-1,Math.min(1,pcm[i]));
+              dv.setInt16(44+i*2, s<0?s*0x8000:s*0x7FFF, true);
+            }
+            const blob = new Blob([wavBuf], { type: 'audio/wav' });
 
             micBtn.classList.add('polishing');
             snapshotForUndo();
 
-            // Transcribe via Whisper then process
             const formData = new FormData();
-            formData.append('audio', blob, 'recording.webm');
+            formData.append('audio', blob, 'recording.wav');
             fetch('https://notes-polish.dcop14c.workers.dev/transcribe', {
-              method: 'POST',
-              body: formData,
-              signal: AbortSignal.timeout(30000),
+              method: 'POST', body: formData, signal: AbortSignal.timeout(30000),
             })
               .then(r => r.ok ? r.json() : Promise.reject())
               .then(data => {
@@ -2830,7 +2849,6 @@ function renderPanel(nbId, gridEl, titleEl, countEl) {
                 if (!text) { micBtn.classList.remove('polishing'); return; }
 
                 if (savedSelRange) {
-                  // Selection mode → AI edit only the selected portion
                   fetch('https://notes-polish.dcop14c.workers.dev', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -2841,34 +2859,24 @@ function renderPanel(nbId, gridEl, titleEl, countEl) {
                     .then(data => {
                       if (data.content) {
                         const s = window.getSelection();
-                        s.removeAllRanges();
-                        s.addRange(savedSelRange);
+                        s.removeAllRanges(); s.addRange(savedSelRange);
                         document.execCommand('insertHTML', false, data.content);
-                        note.text = ta.innerHTML;
-                        debounceSave();
+                        note.text = ta.innerHTML; debounceSave();
                       }
                     })
                     .catch(() => {
                       const s = window.getSelection();
-                      s.removeAllRanges();
-                      s.addRange(savedSelRange);
+                      s.removeAllRanges(); s.addRange(savedSelRange);
                       document.execCommand('insertText', false, text + ' ');
-                      note.text = ta.innerHTML;
-                      debounceSave();
+                      note.text = ta.innerHTML; debounceSave();
                     })
                     .finally(() => micBtn.classList.remove('polishing'));
                 } else {
-                  // No selection → polish transcript and insert at cursor
                   const insertAtCursor = str => {
                     ta.focus();
-                    if (savedCursorRange) {
-                      const s = window.getSelection();
-                      s.removeAllRanges();
-                      s.addRange(savedCursorRange);
-                    }
+                    if (savedCursorRange) { const s = window.getSelection(); s.removeAllRanges(); s.addRange(savedCursorRange); }
                     document.execCommand('insertText', false, str + ' ');
-                    note.text = ta.innerHTML;
-                    debounceSave();
+                    note.text = ta.innerHTML; debounceSave();
                   };
                   fetch('https://notes-polish.dcop14c.workers.dev', {
                     method: 'POST',
@@ -2883,13 +2891,11 @@ function renderPanel(nbId, gridEl, titleEl, countEl) {
                 }
               })
               .catch(() => micBtn.classList.remove('polishing'));
-          };
+          }
 
-          chunks.length = 0;
           micBtn.classList.add('recording');
           card.classList.add('mic-active');
-          window._activeRec = recorder; window._activeMicBtn = micBtn;
-          recorder.start();
+          window._activeRec = { stop: stopRec }; window._activeMicBtn = micBtn;
         }).catch(() => {});
       });
     }
@@ -3381,55 +3387,91 @@ Promise.all([
     const selTA = selAnchorTA;
 
     navigator.mediaDevices.getUserMedia({
-      audio: { noiseSuppression: true, autoGainControl: true, echoCancellation: true }
+      audio: { noiseSuppression: true, autoGainControl: true, echoCancellation: true, sampleRate: 16000 }
     }).then(stream => {
-      const audioCtx = new AudioContext();
+      const audioCtx = new AudioContext({ sampleRate: 16000 });
       const source = audioCtx.createMediaStreamSource(stream);
       const analyser = audioCtx.createAnalyser();
       analyser.fftSize = 512;
       source.connect(analyser);
-      const dataArr = new Uint8Array(analyser.frequencyBinCount);
+      const freqData = new Uint8Array(analyser.frequencyBinCount);
 
-      const recorder = new MediaRecorder(stream, { mimeType: MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus' : 'audio/webm' });
-      const chunks = [];
-      recorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
+      // Capture raw PCM via ScriptProcessor
+      const processor = audioCtx.createScriptProcessor(4096, 1, 1);
+      const pcmChunks = [];
+      processor.onaudioprocess = e => {
+        const data = e.inputBuffer.getChannelData(0);
+        pcmChunks.push(new Float32Array(data));
+      };
+      source.connect(processor);
+      processor.connect(audioCtx.destination);
 
-      // Voice activity detection: auto-stop after 1.2s of silence following speech
+      // Voice activity detection
       let speechDetected = false;
       let silenceStart = null;
-      const SILENCE_THRESHOLD = 15;
-      const SILENCE_DURATION = 1200;
+      let stopped = false;
       const vadCheck = setInterval(() => {
-        analyser.getByteFrequencyData(dataArr);
-        const avg = dataArr.reduce((a, b) => a + b, 0) / dataArr.length;
-        if (avg > SILENCE_THRESHOLD) {
-          speechDetected = true;
-          silenceStart = null;
-        } else if (speechDetected) {
+        analyser.getByteFrequencyData(freqData);
+        const avg = freqData.reduce((a, b) => a + b, 0) / freqData.length;
+        if (avg > 15) { speechDetected = true; silenceStart = null; }
+        else if (speechDetected) {
           if (!silenceStart) silenceStart = Date.now();
-          else if (Date.now() - silenceStart > SILENCE_DURATION) {
-            recorder.stop();
+          else if (Date.now() - silenceStart > 1200 && !stopped) {
+            stopped = true;
+            finishRecording();
           }
         }
       }, 100);
 
-      recorder.onstop = () => {
+      // Manual stop support
+      const origStop = () => { if (!stopped) { stopped = true; finishRecording(); } };
+      window._smartRec = { stop: origStop };
+
+      function finishRecording() {
         clearInterval(vadCheck);
+        processor.disconnect();
+        source.disconnect();
         stream.getTracks().forEach(t => t.stop());
-        audioCtx.close();
+
         btn.classList.remove('recording');
         window._smartRec = null;
 
-        if (chunks.length === 0) return;
-        const blob = new Blob(chunks, { type: recorder.mimeType });
-        if (blob.size < 1000) return; // too short
+        if (pcmChunks.length === 0) { audioCtx.close(); return; }
+
+        // Encode as 16-bit WAV
+        const totalLen = pcmChunks.reduce((s, c) => s + c.length, 0);
+        const pcm = new Float32Array(totalLen);
+        let off = 0;
+        for (const c of pcmChunks) { pcm.set(c, off); off += c.length; }
+        const sampleRate = audioCtx.sampleRate;
+        audioCtx.close();
+
+        const wavBuf = new ArrayBuffer(44 + totalLen * 2);
+        const view = new DataView(wavBuf);
+        const writeStr = (o, s) => { for (let i = 0; i < s.length; i++) view.setUint8(o + i, s.charCodeAt(i)); };
+        writeStr(0, 'RIFF');
+        view.setUint32(4, 36 + totalLen * 2, true);
+        writeStr(8, 'WAVE');
+        writeStr(12, 'fmt ');
+        view.setUint32(16, 16, true);
+        view.setUint16(20, 1, true);
+        view.setUint16(22, 1, true);
+        view.setUint32(24, sampleRate, true);
+        view.setUint32(28, sampleRate * 2, true);
+        view.setUint16(32, 2, true);
+        view.setUint16(34, 16, true);
+        writeStr(36, 'data');
+        view.setUint32(40, totalLen * 2, true);
+        for (let i = 0; i < totalLen; i++) {
+          const s = Math.max(-1, Math.min(1, pcm[i]));
+          view.setInt16(44 + i * 2, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+        }
+        const blob = new Blob([wavBuf], { type: 'audio/wav' });
 
         btn.classList.add('processing');
-
-        // Transcribe via Whisper
         const formData = new FormData();
-        formData.append('audio', blob, 'recording.webm');
-        console.log('[smart-rec] sending audio to Whisper, size:', blob.size);
+        formData.append('audio', blob, 'recording.wav');
+        console.log('[smart-rec] sending WAV to Whisper, size:', blob.size, 'samples:', totalLen, 'rate:', sampleRate);
         fetch('https://notes-polish.dcop14c.workers.dev/transcribe', {
           method: 'POST',
           body: formData,
@@ -3443,12 +3485,9 @@ Promise.all([
             processSmartCommand(text, btn, savedSelRange, selectedText, selTA);
           })
           .catch(err => { console.error('[smart-rec] error:', err); btn.classList.remove('processing'); });
-      };
+      }
 
-      chunks.length = 0;
       btn.classList.add('recording');
-      window._smartRec = recorder;
-      recorder.start();
     }).catch(() => {});
   });
 
