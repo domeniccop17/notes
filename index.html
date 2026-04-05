@@ -61,92 +61,133 @@
     text-transform: uppercase;
   }
 
-  /* TASK DISPLAY — glass + neumorphism dashboard */
+  /* TASK DISPLAY — elegant ambient dashboard */
   .task-display {
     flex: 1;
     max-width: 580px;
-    background: rgba(236, 234, 228, 0.45);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-    border: 1px solid rgba(212, 208, 200, 0.4);
-    border-radius: 18px;
-    padding: 12px 20px;
+    height: 56px;
+    background: linear-gradient(135deg, rgba(236,234,228,0.35), rgba(224,221,214,0.25));
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255,255,255,0.25);
+    border-radius: 16px;
+    padding: 0 20px;
     display: flex;
     align-items: center;
     overflow: hidden;
     box-shadow:
-      5px 5px 12px rgba(0, 0, 0, 0.06),
-      -4px -4px 10px rgba(255, 255, 255, 0.7),
-      inset 0 1px 0 rgba(255, 255, 255, 0.5);
+      0 2px 12px rgba(0,0,0,0.04),
+      inset 0 1px 0 rgba(255,255,255,0.4);
+    cursor: pointer;
+    position: relative;
   }
   :root.dark .task-display {
-    background: rgba(34, 33, 32, 0.4);
-    border: 1px solid rgba(58, 56, 53, 0.35);
+    background: linear-gradient(135deg, rgba(50,48,44,0.5), rgba(40,38,35,0.4));
+    border: 1px solid rgba(255,255,255,0.08);
     box-shadow:
-      5px 5px 12px rgba(0, 0, 0, 0.35),
-      -4px -4px 10px rgba(255, 255, 255, 0.03),
-      inset 0 1px 0 rgba(255, 255, 255, 0.05);
+      0 2px 16px rgba(0,0,0,0.25),
+      inset 0 1px 0 rgba(255,255,255,0.06);
   }
   .task-display-inner {
     width: 100%;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
+    height: 100%;
+    position: relative;
     overflow: hidden;
   }
 
-  /* Featured task row */
-  .td-featured {
+  /* Carousel slide */
+  .td-slide {
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 100%;
     display: flex;
     align-items: center;
-    gap: 8px;
-    width: 100%;
-    overflow: hidden;
+    gap: 10px;
+    opacity: 0;
+    transform: translateY(8px);
+    transition: opacity 0.5s ease, transform 0.5s ease;
+    pointer-events: none;
   }
-  .td-featured .td-pri-badge {
-    font-family: 'DM Mono', monospace;
-    font-size: 9px;
-    font-weight: 600;
-    letter-spacing: 0.05em;
-    text-transform: uppercase;
-    padding: 2px 7px;
-    border-radius: 4px;
+  .td-slide.active {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+  }
+  .td-slide.exit {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+
+  /* Priority icon */
+  .td-pri-icon {
     flex-shrink: 0;
+    font-size: 10px;
+    line-height: 1;
   }
-  .td-pri-badge.b-high { background: rgba(224, 92, 74, 0.15); color: #e05c4a; }
-  .td-pri-badge.b-med { background: rgba(232, 160, 48, 0.15); color: #c08020; }
-  .td-pri-badge.b-low { background: rgba(136, 133, 128, 0.12); color: var(--muted); }
-  :root.dark .td-pri-badge.b-high { background: rgba(224, 92, 74, 0.2); color: #f07060; }
-  :root.dark .td-pri-badge.b-med { background: rgba(232, 160, 48, 0.2); color: #e8a030; }
-  :root.dark .td-pri-badge.b-low { background: rgba(136, 133, 128, 0.15); }
-  .td-featured .td-task-text {
+
+  /* Task text */
+  .td-task-text {
     font-family: 'DM Sans', sans-serif;
-    font-size: 13px;
+    font-size: 15px;
     color: var(--text);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
     flex: 1;
   }
-  .td-featured .td-next-label {
+
+  /* Notebook source label */
+  .td-nb-label {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-shrink: 0;
     font-family: 'DM Mono', monospace;
     font-size: 9px;
     color: var(--muted);
-    opacity: 0.5;
+    opacity: 0.6;
     text-transform: uppercase;
-    letter-spacing: 0.05em;
+    letter-spacing: 0.04em;
+  }
+  .td-nb-dot {
+    width: 5px; height: 5px;
+    border-radius: 50%;
     flex-shrink: 0;
   }
+
+  /* Done flash */
+  .td-done-flash {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(106,191,105,0.12);
+    border-radius: 16px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+    z-index: 2;
+  }
+  .td-done-flash.show { opacity: 1; }
+  .td-done-flash span {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    color: #4a9e4a;
+    font-weight: 500;
+  }
+  :root.dark .td-done-flash { background: rgba(106,191,105,0.1); }
+  :root.dark .td-done-flash span { color: #6abf69; }
 
   /* Empty state */
   .task-display-empty {
     font-family: 'DM Sans', sans-serif;
     font-size: 14px;
+    font-style: italic;
     color: var(--muted);
-    opacity: 0.4;
+    opacity: 0.45;
     width: 100%;
     text-align: center;
-    padding: 6px 0;
   }
 
   .header-actions {
@@ -2289,6 +2330,7 @@ function renderPanel(nbId, gridEl, titleEl, countEl) {
       snapshotForUndo();
       const newItem = document.createElement('div');
       newItem.className = 'checklist-item';
+      newItem.setAttribute('data-created-at', Date.now().toString());
       newItem.innerHTML = '<input type="checkbox"><span>\u200B</span>';
       // Insert after the last sub-point of this item (if any)
       let insertAfter = item;
@@ -3401,15 +3443,138 @@ function render() {
 }
 
 // — LIVE TASK DISPLAY ———————————————————
-function updateTaskDisplay() {
-  const inner = document.getElementById('taskDisplayInner');
-  if (!inner) return;
+// ── TASK DASHBOARD ──────────────────────────────
+const MOTIVATIONAL = [
+  "Nothing pending — enjoy the calm.",
+  "All caught up. Nice work.",
+  "Clean slate. What's next?",
+  "Zero tasks. Breathe easy.",
+  "You're on top of everything.",
+  "All done for now. Take a break.",
+  "Clear mind, clear list.",
+  "Nothing to do — or is there?",
+];
 
-  // Collect unchecked tasks from ALL notebooks
+let _dashTasks = [];
+let _dashSlideIdx = 0;
+let _dashCarouselTimer = null;
+let _dashLastChecked = new Set();
+
+function collectDashTasks() {
   const tasks = [];
+  const now = Date.now();
   for (const nbId of Object.keys(state.notes)) {
     const nb = state.notebooks.find(n => n.id === nbId);
     const nbName = nb ? nb.name : '';
+    const nbColor = nb ? nb.color : 'var(--muted)';
+    const isTodo = nb && isTodoNotebook(nb);
+    (state.notes[nbId] || []).forEach((note, noteIdx) => {
+      if (!note.text) return;
+      const d = document.createElement('div');
+      d.innerHTML = note.text;
+      d.querySelectorAll('.checklist-item').forEach((item, itemIdx) => {
+        if (item.classList.contains('checked')) return;
+        const span = item.querySelector('span');
+        const t = span ? span.textContent.replace(/[\u200B\u00A0\uFEFF]/g, '').trim() : '';
+        if (!t || !/\w/.test(t)) return;
+        const pri = parseInt(item.getAttribute('data-priority') || '0') || 0;
+        // Age boost: tasks older than 24h get +0.5 per day, capped at +2
+        const created = parseInt(item.getAttribute('data-created-at') || '0');
+        const ageDays = created ? (now - created) / 86400000 : 0;
+        const ageBoost = Math.min(ageDays * 0.5, 2);
+        tasks.push({
+          text: t, pri, score: pri + ageBoost,
+          nb: nbName, nbColor, isTodo, nbId, noteIdx, itemIdx
+        });
+      });
+    });
+  }
+  tasks.sort((a, b) => b.score - a.score);
+  return tasks;
+}
+
+function buildSlideHtml(task) {
+  const icon = task.pri >= 3 ? '🔴' : task.pri === 2 ? '🟠' : '⚪';
+  let html = `<span class="td-pri-icon">${icon}</span>`;
+  html += `<span class="td-task-text">${task.text}</span>`;
+  if (!task.isTodo && task.nb) {
+    html += `<span class="td-nb-label"><span class="td-nb-dot" style="background:${task.nbColor}"></span>${task.nb}</span>`;
+  }
+  return html;
+}
+
+function renderDashSlides() {
+  const inner = document.getElementById('taskDisplayInner');
+  if (!inner) return;
+
+  _dashTasks = collectDashTasks();
+
+  if (!_dashTasks.length) {
+    const msg = MOTIVATIONAL[Math.floor(Math.random() * MOTIVATIONAL.length)];
+    inner.innerHTML = `<span class="task-display-empty">${msg}</span>`;
+    if (_dashCarouselTimer) { clearInterval(_dashCarouselTimer); _dashCarouselTimer = null; }
+    return;
+  }
+
+  // Build slides for all tasks
+  let html = '<div class="td-done-flash" id="tdDoneFlash"><span>✓ Done</span></div>';
+  _dashTasks.forEach((t, i) => {
+    const cls = i === 0 ? 'td-slide active' : 'td-slide';
+    html += `<div class="${cls}" data-dash-idx="${i}" data-nb-id="${t.nbId}" data-note-idx="${t.noteIdx}">${buildSlideHtml(t)}</div>`;
+  });
+  inner.innerHTML = html;
+  _dashSlideIdx = 0;
+
+  // Start carousel if multiple tasks
+  if (_dashCarouselTimer) clearInterval(_dashCarouselTimer);
+  if (_dashTasks.length > 1) {
+    _dashCarouselTimer = setInterval(advanceDashSlide, 12000);
+  }
+}
+
+function advanceDashSlide() {
+  const inner = document.getElementById('taskDisplayInner');
+  if (!inner || !_dashTasks.length) return;
+  const slides = inner.querySelectorAll('.td-slide');
+  if (slides.length <= 1) return;
+
+  const current = slides[_dashSlideIdx];
+  if (current) { current.classList.remove('active'); current.classList.add('exit'); }
+
+  _dashSlideIdx = (_dashSlideIdx + 1) % slides.length;
+  const next = slides[_dashSlideIdx];
+
+  // Reset next slide position
+  next.style.transition = 'none';
+  next.classList.remove('exit');
+  next.style.opacity = '0';
+  next.style.transform = 'translateY(8px)';
+
+  requestAnimationFrame(() => {
+    next.style.transition = '';
+    next.classList.add('active');
+    next.style.opacity = '';
+    next.style.transform = '';
+  });
+
+  // Clean exit class after transition
+  if (current) setTimeout(() => current.classList.remove('exit'), 500);
+}
+
+function flashDashDone() {
+  const flash = document.getElementById('tdDoneFlash');
+  if (!flash) return;
+  flash.classList.add('show');
+  setTimeout(() => {
+    flash.classList.remove('show');
+    setTimeout(renderDashSlides, 300);
+  }, 1200);
+}
+
+function updateTaskDisplay() {
+  // Check for newly completed tasks
+  const currentIds = new Set();
+  for (const nbId of Object.keys(state.notes)) {
     (state.notes[nbId] || []).forEach(note => {
       if (!note.text) return;
       const d = document.createElement('div');
@@ -3418,45 +3583,41 @@ function updateTaskDisplay() {
         if (item.classList.contains('checked')) return;
         const span = item.querySelector('span');
         const t = span ? span.textContent.replace(/[\u200B\u00A0\uFEFF]/g, '').trim() : '';
-        if (!t || !/\w/.test(t)) return;
-        const pri = parseInt(item.getAttribute('data-priority') || '0') || 0;
-        tasks.push({ text: t, pri, nb: nbName });
+        if (t && /\w/.test(t)) currentIds.add(t);
       });
     });
   }
 
-  if (!tasks.length) {
-    inner.innerHTML = '<span class="task-display-empty">All clear</span>';
-    return;
+  // If a task disappeared (got checked), flash
+  if (_dashLastChecked.size > 0) {
+    let wasCompleted = false;
+    for (const id of _dashLastChecked) {
+      if (!currentIds.has(id)) { wasCompleted = true; break; }
+    }
+    if (wasCompleted) {
+      _dashLastChecked = currentIds;
+      flashDashDone();
+      return;
+    }
   }
-
-  // Sort by priority (highest first), then randomize within same priority
-  tasks.sort((a, b) => b.pri - a.pri || (Math.random() - 0.5));
-  const feat = tasks[0];
-
-  const badge = feat.pri >= 3 ? 'b-high' : feat.pri === 2 ? 'b-med' : 'b-low';
-  const label = feat.pri >= 3 ? 'urgent' : feat.pri === 2 ? 'next' : 'to do';
-
-  let html = `<div class="td-featured">`;
-  html += `<span class="td-pri-badge ${badge}">${label}</span>`;
-  html += `<span class="td-task-text">${feat.text}</span>`;
-  if (feat.nb) html += `<span class="td-next-label">${feat.nb}</span>`;
-  html += `</div>`;
-
-  // If there's a second task worth showing (different from first), add it
-  const second = tasks.find((t, i) => i > 0 && t.text !== feat.text);
-  if (second) {
-    const badge2 = second.pri >= 3 ? 'b-high' : second.pri === 2 ? 'b-med' : 'b-low';
-    const label2 = second.pri >= 3 ? 'urgent' : second.pri === 2 ? 'next' : 'to do';
-    html += `<div class="td-featured">`;
-    html += `<span class="td-pri-badge ${badge2}">${label2}</span>`;
-    html += `<span class="td-task-text">${second.text}</span>`;
-    if (second.nb) html += `<span class="td-next-label">${second.nb}</span>`;
-    html += `</div>`;
-  }
-
-  inner.innerHTML = html;
+  _dashLastChecked = currentIds;
+  renderDashSlides();
 }
+
+// Click to navigate
+document.getElementById('taskDisplay')?.addEventListener('click', () => {
+  const inner = document.getElementById('taskDisplayInner');
+  if (!inner || !_dashTasks.length) return;
+  const active = inner.querySelector('.td-slide.active');
+  if (!active) return;
+  const nbId = active.getAttribute('data-nb-id');
+  const noteIdx = parseInt(active.getAttribute('data-note-idx') || '0');
+  if (nbId && state.notes[nbId]) {
+    state.activeNotebook = nbId;
+    saveState();
+    render();
+  }
+});
 
 // Auto-refresh every 30s
 setInterval(updateTaskDisplay, 30000);
