@@ -3546,6 +3546,7 @@ function collectDashTasks() {
         const t = span ? span.textContent.replace(/[\u200B\u00A0\uFEFF]/g, '').trim() : '';
         if (!t || !/\w/.test(t)) return;
         const pri = parseInt(item.getAttribute('data-priority') || '0') || 0;
+        if (pri === 2) return; // skip medium priority from dashboard
         // Age boost: tasks older than 24h get +0.5 per day, capped at +2
         const created = parseInt(item.getAttribute('data-created-at') || '0');
         const ageDays = created ? (now - created) / 86400000 : 0;
@@ -3714,7 +3715,10 @@ document.getElementById('taskDisplay')?.addEventListener('click', (e) => {
       // Position arrow to point at the start of hovered task row
       const displayRect = display.getBoundingClientRect();
       const rowRect = row.getBoundingClientRect();
-      const arrowLeft = (rowRect.left - displayRect.left) + 16;
+      // Point arrow at the priority icon (colored dot)
+      const icon = row.querySelector('.td-pri-icon');
+      const iconRect = icon ? icon.getBoundingClientRect() : rowRect;
+      const arrowLeft = (iconRect.left - displayRect.left) + (iconRect.width / 2) - 5;
       arrow.style.left = arrowLeft + 'px';
       // Position tooltip so arrow area is visible
       const tipLeft = Math.max(0, arrowLeft - 20);
