@@ -3562,6 +3562,11 @@ function collectDashTasks() {
   // Sort strictly by priority tier: high(3) > medium(2) > low(0)
   // Within same priority, sort by age (older first)
   tasks.sort((a, b) => b.pri - a.pri || b.score - a.score);
+  // Only show the highest available priority tier
+  if (tasks.length) {
+    const topPri = tasks[0].pri;
+    return tasks.filter(t => t.pri === topPri);
+  }
   return tasks;
 }
 
