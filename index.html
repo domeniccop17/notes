@@ -2779,17 +2779,24 @@ function renderPanel(nbId, gridEl, titleEl, countEl) {
         rec.continuous = true;
         rec.interimResults = true;
         rec.lang = 'fr-FR';
+        rec.maxAlternatives = 3;
         let transcript = '';
         let silenceTimer = null;
 
         const resetSilenceTimer = () => {
           clearTimeout(silenceTimer);
-          silenceTimer = setTimeout(() => { if (window._activeRec === rec) rec.stop(); }, 500);
+          silenceTimer = setTimeout(() => { if (window._activeRec === rec) rec.stop(); }, 800);
         };
 
         rec.onresult = ev => {
           for (let i = ev.resultIndex; i < ev.results.length; i++) {
-            if (ev.results[i].isFinal) transcript += ev.results[i][0].transcript + ' ';
+            if (ev.results[i].isFinal) {
+              let best = ev.results[i][0];
+              for (let a = 1; a < ev.results[i].length; a++) {
+                if (ev.results[i][a].confidence > best.confidence) best = ev.results[i][a];
+              }
+              transcript += best.transcript + ' ';
+            }
           }
           resetSilenceTimer();
         };
@@ -3337,6 +3344,16 @@ Promise.all([
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SR) { btn.style.display = 'none'; return; }
 
+  // Activate browser-level noise suppression once
+  let _micStreamReady = false;
+  navigator.mediaDevices?.getUserMedia({
+    audio: { noiseSuppression: true, autoGainControl: true, echoCancellation: true }
+  }).then(stream => {
+    _micStreamReady = true;
+    // Keep stream alive so browser noise filters stay active
+    window._noiseSuppressedStream = stream;
+  }).catch(() => {});
+
   btn.addEventListener('click', () => {
     if (btn.classList.contains('processing')) return;
 
@@ -3365,17 +3382,25 @@ Promise.all([
     rec.continuous = true;
     rec.interimResults = true;
     rec.lang = 'fr-FR';
+    rec.maxAlternatives = 3;
     let transcript = '';
     let silenceTimer = null;
 
     const resetSilenceTimer = () => {
       clearTimeout(silenceTimer);
-      silenceTimer = setTimeout(() => { if (window._smartRec === rec) rec.stop(); }, 500);
+      silenceTimer = setTimeout(() => { if (window._smartRec === rec) rec.stop(); }, 800);
     };
 
     rec.onresult = ev => {
       for (let i = ev.resultIndex; i < ev.results.length; i++) {
-        if (ev.results[i].isFinal) transcript += ev.results[i][0].transcript + ' ';
+        if (ev.results[i].isFinal) {
+          // Pick the highest-confidence alternative
+          let best = ev.results[i][0];
+          for (let a = 1; a < ev.results[i].length; a++) {
+            if (ev.results[i][a].confidence > best.confidence) best = ev.results[i][a];
+          }
+          transcript += best.transcript + ' ';
+        }
       }
       resetSilenceTimer();
     };
