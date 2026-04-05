@@ -284,6 +284,134 @@
     line-height: 1;
   }
 
+  /* TIMER */
+  .timer-btn { position: relative; }
+  .timer-btn.running { border-color: #e05c4a; color: #e05c4a; }
+  .timer-btn.running:hover { border-color: #c0392b; color: #c0392b; }
+
+  /* Timer setup dropdown */
+  .timer-dropdown {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+    z-index: 9999;
+    display: none;
+    min-width: 200px;
+  }
+  .timer-dropdown.show { display: block; }
+  :root.dark .timer-dropdown { box-shadow: 0 8px 24px rgba(0,0,0,0.35); }
+  .timer-presets {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 10px;
+  }
+  .timer-presets button {
+    flex: 1;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    background: var(--tag-bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 6px 4px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .timer-presets button:hover { border-color: var(--text); }
+  .timer-custom {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+  }
+  .timer-custom input {
+    flex: 1;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 6px 8px;
+    border-radius: 6px;
+    outline: none;
+    width: 60px;
+    text-align: center;
+  }
+  .timer-custom input:focus { border-color: var(--text); }
+  .timer-custom button {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    background: var(--text);
+    color: var(--bg);
+    border: none;
+    padding: 6px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: opacity 0.15s;
+  }
+  .timer-custom button:hover { opacity: 0.8; }
+
+  /* Live countdown display */
+  .timer-live {
+    display: none;
+    align-items: center;
+    gap: 10px;
+    background: linear-gradient(135deg, rgba(236,234,228,0.35), rgba(224,221,214,0.25));
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255,255,255,0.25);
+    border-radius: 12px;
+    padding: 6px 14px;
+    box-shadow:
+      0 2px 12px rgba(0,0,0,0.04),
+      inset 0 1px 0 rgba(255,255,255,0.4);
+    flex-shrink: 0;
+  }
+  .timer-live.active { display: flex; }
+  :root.dark .timer-live {
+    background: linear-gradient(135deg, rgba(50,48,44,0.5), rgba(40,38,35,0.4));
+    border: 1px solid rgba(255,255,255,0.08);
+    box-shadow:
+      0 2px 16px rgba(0,0,0,0.25),
+      inset 0 1px 0 rgba(255,255,255,0.06);
+  }
+  .timer-live-time {
+    font-family: 'DM Mono', monospace;
+    font-size: 22px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    color: var(--text);
+    min-width: 70px;
+    text-align: center;
+  }
+  .timer-live.warning .timer-live-time { color: #e8a030; }
+  .timer-live.danger .timer-live-time { color: #e05c4a; }
+  .timer-live.done { animation: timerFlash 0.6s ease infinite alternate; }
+  @keyframes timerFlash {
+    0% { opacity: 1; }
+    100% { opacity: 0.4; }
+  }
+  .timer-live-controls {
+    display: flex;
+    gap: 4px;
+  }
+  .timer-live-controls button {
+    background: none;
+    border: none;
+    color: var(--muted);
+    font-size: 14px;
+    cursor: pointer;
+    padding: 2px 4px;
+    border-radius: 4px;
+    transition: color 0.15s;
+    line-height: 1;
+  }
+  .timer-live-controls button:hover { color: var(--text); }
+
   /* MAIN LAYOUT */
   .workspace {
     display: flex;
@@ -1193,7 +1321,29 @@
     </div>
     <div id="dashTooltip"><div id="dashTooltipArrow"></div><span id="dashTooltipText"></span></div>
   </div>
+  <div class="timer-live" id="timerLive">
+    <span class="timer-live-time" id="timerTime">00:00</span>
+    <div class="timer-live-controls">
+      <button id="timerPauseBtn" title="Pause">⏸</button>
+      <button id="timerStopBtn" title="Stop">⏹</button>
+    </div>
+  </div>
   <div class="header-actions">
+    <div style="position:relative">
+      <button class="btn timer-btn" id="timerBtn" title="Timer">⏱ timer</button>
+      <div class="timer-dropdown" id="timerDropdown">
+        <div class="timer-presets">
+          <button data-mins="5">5m</button>
+          <button data-mins="15">15m</button>
+          <button data-mins="25">25m</button>
+          <button data-mins="60">60m</button>
+        </div>
+        <div class="timer-custom">
+          <input type="number" id="timerCustomInput" placeholder="min" min="1" max="999">
+          <button id="timerStartCustom">Start</button>
+        </div>
+      </div>
+    </div>
     <button class="btn icon-btn" id="darkModeBtn" title="Toggle dark mode">☀️</button>
     <button class="btn" id="addNotebookBtn">+ notebook</button>
     <button class="btn primary" id="addNoteBtn">+ note</button>
@@ -3749,6 +3899,160 @@ document.getElementById('taskDisplay')?.addEventListener('click', (e) => {
 
 // Auto-refresh every 30s
 setInterval(updateTaskDisplay, 30000);
+
+// ── TIMER ───────────────────────────────────────
+(function() {
+  const btn = document.getElementById('timerBtn');
+  const dropdown = document.getElementById('timerDropdown');
+  const live = document.getElementById('timerLive');
+  const timeEl = document.getElementById('timerTime');
+  const pauseBtn = document.getElementById('timerPauseBtn');
+  const stopBtn = document.getElementById('timerStopBtn');
+  const customInput = document.getElementById('timerCustomInput');
+  const startCustom = document.getElementById('timerStartCustom');
+  if (!btn || !dropdown || !live || !timeEl) return;
+
+  let endTime = 0;
+  let remaining = 0;
+  let interval = null;
+  let paused = false;
+  let alertAudio = null;
+
+  function formatTime(secs) {
+    const m = Math.floor(secs / 60);
+    const s = secs % 60;
+    return String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
+  }
+
+  function startTimer(mins) {
+    if (interval) clearInterval(interval);
+    dropdown.classList.remove('show');
+    remaining = mins * 60;
+    endTime = Date.now() + remaining * 1000;
+    paused = false;
+    pauseBtn.textContent = '⏸';
+    btn.classList.add('running');
+    live.classList.add('active');
+    live.classList.remove('warning', 'danger', 'done');
+    updateTimerDisplay();
+    interval = setInterval(tick, 250);
+    // Request notification permission
+    if (Notification && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+  }
+
+  function tick() {
+    if (paused) return;
+    remaining = Math.max(0, Math.ceil((endTime - Date.now()) / 1000));
+    updateTimerDisplay();
+    if (remaining <= 0) {
+      clearInterval(interval);
+      interval = null;
+      onTimerDone();
+    }
+  }
+
+  function updateTimerDisplay() {
+    timeEl.textContent = formatTime(remaining);
+    live.classList.toggle('warning', remaining <= 60 && remaining > 10);
+    live.classList.toggle('danger', remaining <= 10 && remaining > 0);
+  }
+
+  function onTimerDone() {
+    live.classList.add('done');
+    live.classList.remove('warning', 'danger');
+    timeEl.textContent = '00:00';
+    // Sound
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      [0, 300, 600].forEach(delay => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.frequency.value = 880;
+        osc.type = 'sine';
+        gain.gain.value = 0.3;
+        osc.start(ctx.currentTime + delay / 1000);
+        osc.stop(ctx.currentTime + delay / 1000 + 0.15);
+      });
+    } catch(e) {}
+    // Browser notification
+    if (Notification && Notification.permission === 'granted') {
+      new Notification('Timer done!', { body: 'Your countdown has finished.', icon: '⏱' });
+    }
+    // Auto-stop after 5s of flashing
+    setTimeout(() => {
+      if (live.classList.contains('done')) stopTimer();
+    }, 5000);
+  }
+
+  function stopTimer() {
+    if (interval) clearInterval(interval);
+    interval = null;
+    paused = false;
+    remaining = 0;
+    btn.classList.remove('running');
+    live.classList.remove('active', 'warning', 'danger', 'done');
+  }
+
+  function togglePause() {
+    if (!interval && !paused) return;
+    paused = !paused;
+    if (paused) {
+      pauseBtn.textContent = '▶';
+    } else {
+      endTime = Date.now() + remaining * 1000;
+      pauseBtn.textContent = '⏸';
+    }
+  }
+
+  // Toggle dropdown
+  btn.addEventListener('click', () => {
+    if (btn.classList.contains('running')) {
+      // If running, click stops
+      stopTimer();
+    } else {
+      dropdown.classList.toggle('show');
+      if (dropdown.classList.contains('show')) {
+        customInput.value = '';
+        customInput.focus();
+      }
+    }
+  });
+
+  // Preset buttons
+  dropdown.querySelectorAll('.timer-presets button').forEach(b => {
+    b.addEventListener('click', () => {
+      const mins = parseInt(b.getAttribute('data-mins'));
+      if (mins > 0) startTimer(mins);
+    });
+  });
+
+  // Custom start
+  startCustom.addEventListener('click', () => {
+    const mins = parseInt(customInput.value);
+    if (mins > 0) startTimer(mins);
+  });
+  customInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      const mins = parseInt(customInput.value);
+      if (mins > 0) startTimer(mins);
+    }
+  });
+
+  // Pause/stop controls
+  pauseBtn.addEventListener('click', togglePause);
+  stopBtn.addEventListener('click', stopTimer);
+
+  // Close dropdown on outside click
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('.timer-btn') && !e.target.closest('.timer-dropdown')) {
+      dropdown.classList.remove('show');
+    }
+  });
+})();
 
 render();
 </script>
