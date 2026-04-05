@@ -43,12 +43,14 @@
   /* TOP BAR */
   header {
     display: flex;
-    align-items: center;
+    align-items: stretch;
     justify-content: space-between;
-    padding: 14px 24px;
+    padding: 6px 18px;
     border-bottom: 1px solid var(--border);
     flex-shrink: 0;
+    gap: 12px;
   }
+  header > div { display: flex; align-items: center; }
 
   .logo {
     font-family: 'DM Mono', monospace;
@@ -62,65 +64,59 @@
   /* TASK DISPLAY */
   .task-display {
     flex: 1;
-    max-width: 420px;
-    margin: 0 20px;
+    max-width: 480px;
     background: var(--surface);
     border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 6px 14px;
-    min-height: 32px;
+    border-radius: 8px;
+    padding: 4px 12px;
     display: flex;
     align-items: center;
     overflow: hidden;
-    position: relative;
   }
   .task-display-inner {
     width: 100%;
     display: flex;
-    flex-direction: column;
-    gap: 2px;
+    align-items: center;
+    gap: 14px;
+    overflow: hidden;
   }
   .task-display-empty {
-    font-family: 'DM Mono', monospace;
-    font-size: 10px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 11px;
     color: var(--muted);
-    opacity: 0.5;
-    letter-spacing: 0.03em;
+    opacity: 0.4;
   }
   .task-display-item {
     display: flex;
     align-items: center;
-    gap: 6px;
-    font-family: 'DM Mono', monospace;
-    font-size: 10px;
-    line-height: 1.5;
-    color: var(--text);
+    gap: 5px;
     white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    flex-shrink: 0;
+    max-width: 200px;
   }
   .task-display-item .td-dot {
-    width: 5px; height: 5px;
+    width: 6px; height: 6px;
     border-radius: 50%;
     flex-shrink: 0;
   }
-  .task-display-item .td-dot.p3 { background: #e05c4a; }
-  .task-display-item .td-dot.p2 { background: #e8a030; }
-  .task-display-item .td-dot.p1 { background: #888; }
+  .task-display-item .td-dot.p3 { background: #e05c4a; box-shadow: 0 0 4px rgba(224,92,74,0.4); }
+  .task-display-item .td-dot.p2 { background: #e8a030; box-shadow: 0 0 4px rgba(232,160,48,0.3); }
+  .task-display-item .td-dot.p1 { background: #aaa; }
   .task-display-item .td-text {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 11px;
+    color: var(--text);
     overflow: hidden;
     text-overflow: ellipsis;
-    flex: 1;
   }
-  .task-display-item.pri-3 .td-text { font-weight: 600; }
-  .task-display-item.pri-2 .td-text { font-weight: 500; }
-  .task-display-fade {
-    position: absolute;
-    bottom: 0; left: 0; right: 0;
-    height: 10px;
-    background: linear-gradient(transparent, var(--surface));
-    pointer-events: none;
-    border-radius: 0 0 10px 10px;
+  .task-display-item.pri-3 .td-text { font-weight: 600; color: #e05c4a; }
+  :root.dark .task-display-item.pri-3 .td-text { color: #f07060; }
+  .task-display-item.pri-2 .td-text { font-weight: 500; color: #c08020; }
+  :root.dark .task-display-item.pri-2 .td-text { color: #e8a030; }
+  .task-display-sep {
+    width: 1px; height: 12px;
+    background: var(--border);
+    flex-shrink: 0;
   }
 
   .header-actions {
@@ -3405,26 +3401,36 @@ function updateTaskDisplay() {
     });
   }
 
-  // Sort by priority: 3 (high) first, then 2 (medium), then rest
+  // Sort: high priority first, then medium, then low
   tasks.sort((a, b) => b.pri - a.pri);
 
-  // Show top 4
-  const show = tasks.slice(0, 4);
-  if (!show.length) {
-    inner.innerHTML = '<span class="task-display-empty">All clear — no open tasks</span>';
+  if (!tasks.length) {
+    inner.innerHTML = '<span class="task-display-empty">All clear</span>';
     return;
   }
 
-  inner.innerHTML = show.map(t => {
+  // Show high priority first; fill remaining space with others
+  const high = tasks.filter(t => t.pri >= 3);
+  const med = tasks.filter(t => t.pri === 2);
+  const low = tasks.filter(t => t.pri < 2);
+
+  // Pick tasks to show: all high, then medium, then random low to fill ~3 slots
+  let show = [...high, ...med];
+  if (show.length < 3) {
+    // Shuffle low tasks for variety
+    const shuffled = low.sort(() => Math.random() - 0.5);
+    show = show.concat(shuffled.slice(0, 3 - show.length));
+  }
+  show = show.slice(0, 3);
+
+  const html = show.map((t, i) => {
     const dotClass = t.pri >= 3 ? 'p3' : t.pri === 2 ? 'p2' : 'p1';
     const priClass = t.pri >= 3 ? 'pri-3' : t.pri === 2 ? 'pri-2' : '';
-    return `<div class="task-display-item ${priClass}"><span class="td-dot ${dotClass}"></span><span class="td-text">${t.text}</span></div>`;
+    const sep = i < show.length - 1 ? '<div class="task-display-sep"></div>' : '';
+    return `<div class="task-display-item ${priClass}"><span class="td-dot ${dotClass}"></span><span class="td-text">${t.text}</span></div>${sep}`;
   }).join('');
 
-  // Add remaining count if needed
-  if (tasks.length > 4) {
-    inner.innerHTML += `<div class="task-display-item"><span class="td-dot p1"></span><span class="td-text" style="opacity:0.5">+${tasks.length - 4} more</span></div>`;
-  }
+  inner.innerHTML = html;
 }
 
 // Auto-refresh every 30s
