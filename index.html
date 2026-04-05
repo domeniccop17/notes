@@ -95,27 +95,45 @@
     overflow: hidden;
   }
 
-  /* Carousel slide */
-  .td-slide {
+  /* Carousel pair (2 tasks per slide) */
+  .td-pair {
     position: absolute;
     top: 0; left: 0; right: 0;
     height: 100%;
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 0;
     opacity: 0;
     transform: translateY(8px);
     transition: opacity 0.5s ease, transform 0.5s ease;
     pointer-events: none;
   }
-  .td-slide.active {
+  .td-pair.active {
     opacity: 1;
     transform: translateY(0);
     pointer-events: auto;
   }
-  .td-slide.exit {
+  .td-pair.exit {
     opacity: 0;
     transform: translateY(-8px);
+  }
+
+  /* Single task row within a pair */
+  .td-task-row {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    overflow: hidden;
+    padding: 0 4px;
+    min-width: 0;
+  }
+  .td-pair-sep {
+    width: 1px;
+    height: 20px;
+    background: rgba(136,133,128,0.2);
+    flex-shrink: 0;
+    margin: 0 8px;
   }
 
   /* Priority icon */
@@ -134,6 +152,47 @@
     text-overflow: ellipsis;
     white-space: nowrap;
     flex: 1;
+    min-width: 0;
+  }
+
+  /* Hover tooltip for full text */
+  .td-task-row:hover .td-tooltip {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+  }
+  .td-tooltip {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 12px;
+    right: 12px;
+    background: var(--text);
+    color: var(--bg);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    line-height: 1.5;
+    padding: 8px 12px;
+    border-radius: 8px;
+    white-space: normal;
+    word-break: break-word;
+    opacity: 0;
+    transform: translateY(-4px);
+    transition: opacity 0.2s ease, transform 0.2s ease;
+    pointer-events: none;
+    z-index: 100;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+    max-width: 400px;
+  }
+  .td-tooltip::before {
+    content: '';
+    position: absolute;
+    top: -5px;
+    left: 24px;
+    width: 10px;
+    height: 10px;
+    background: var(--text);
+    transform: rotate(45deg);
+    border-radius: 2px;
   }
 
   /* Notebook source label */
@@ -3493,13 +3552,16 @@ function collectDashTasks() {
   return tasks;
 }
 
-function buildSlideHtml(task) {
+function buildTaskRowHtml(task) {
   const icon = task.pri >= 3 ? '🔴' : task.pri === 2 ? '🟠' : '⚪';
-  let html = `<span class="td-pri-icon">${icon}</span>`;
+  let html = `<div class="td-task-row" data-nb-id="${task.nbId}" data-note-idx="${task.noteIdx}">`;
+  html += `<span class="td-pri-icon">${icon}</span>`;
   html += `<span class="td-task-text">${task.text}</span>`;
   if (!task.isTodo && task.nb) {
     html += `<span class="td-nb-label"><span class="td-nb-dot" style="background:${task.nbColor}"></span>${task.nb}</span>`;
   }
+  html += `<div class="td-tooltip">${task.text}</div>`;
+  html += `</div>`;
   return html;
 }
 
@@ -3516,18 +3578,29 @@ function renderDashSlides() {
     return;
   }
 
-  // Build slides for all tasks
-  let html = '<div class="td-done-flash" id="tdDoneFlash"><span>✓ Done</span></div>';
-  _dashTasks.forEach((t, i) => {
-    const cls = i === 0 ? 'td-slide active' : 'td-slide';
-    html += `<div class="${cls}" data-dash-idx="${i}" data-nb-id="${t.nbId}" data-note-idx="${t.noteIdx}">${buildSlideHtml(t)}</div>`;
+  // Build pairs of 2 tasks per slide
+  const pairs = [];
+  for (let i = 0; i < _dashTasks.length; i += 2) {
+    pairs.push(_dashTasks.slice(i, i + 2));
+  }
+
+  let html = '<div class="td-done-flash" id="tdDoneFlash"><span>\u2713 Done</span></div>';
+  pairs.forEach((pair, i) => {
+    const cls = i === 0 ? 'td-pair active' : 'td-pair';
+    html += `<div class="${cls}">`;
+    html += buildTaskRowHtml(pair[0]);
+    if (pair[1]) {
+      html += `<div class="td-pair-sep"></div>`;
+      html += buildTaskRowHtml(pair[1]);
+    }
+    html += `</div>`;
   });
   inner.innerHTML = html;
   _dashSlideIdx = 0;
 
-  // Start carousel if multiple tasks
+  // Start carousel if more than 1 pair
   if (_dashCarouselTimer) clearInterval(_dashCarouselTimer);
-  if (_dashTasks.length > 1) {
+  if (pairs.length > 1) {
     _dashCarouselTimer = setInterval(advanceDashSlide, 12000);
   }
 }
@@ -3535,16 +3608,15 @@ function renderDashSlides() {
 function advanceDashSlide() {
   const inner = document.getElementById('taskDisplayInner');
   if (!inner || !_dashTasks.length) return;
-  const slides = inner.querySelectorAll('.td-slide');
-  if (slides.length <= 1) return;
+  const pairs = inner.querySelectorAll('.td-pair');
+  if (pairs.length <= 1) return;
 
-  const current = slides[_dashSlideIdx];
+  const current = pairs[_dashSlideIdx];
   if (current) { current.classList.remove('active'); current.classList.add('exit'); }
 
-  _dashSlideIdx = (_dashSlideIdx + 1) % slides.length;
-  const next = slides[_dashSlideIdx];
+  _dashSlideIdx = (_dashSlideIdx + 1) % pairs.length;
+  const next = pairs[_dashSlideIdx];
 
-  // Reset next slide position
   next.style.transition = 'none';
   next.classList.remove('exit');
   next.style.opacity = '0';
@@ -3557,7 +3629,6 @@ function advanceDashSlide() {
     next.style.transform = '';
   });
 
-  // Clean exit class after transition
   if (current) setTimeout(() => current.classList.remove('exit'), 500);
 }
 
@@ -3572,7 +3643,6 @@ function flashDashDone() {
 }
 
 function updateTaskDisplay() {
-  // Check for newly completed tasks
   const currentIds = new Set();
   for (const nbId of Object.keys(state.notes)) {
     (state.notes[nbId] || []).forEach(note => {
@@ -3588,7 +3658,6 @@ function updateTaskDisplay() {
     });
   }
 
-  // If a task disappeared (got checked), flash
   if (_dashLastChecked.size > 0) {
     let wasCompleted = false;
     for (const id of _dashLastChecked) {
@@ -3604,14 +3673,11 @@ function updateTaskDisplay() {
   renderDashSlides();
 }
 
-// Click to navigate
-document.getElementById('taskDisplay')?.addEventListener('click', () => {
-  const inner = document.getElementById('taskDisplayInner');
-  if (!inner || !_dashTasks.length) return;
-  const active = inner.querySelector('.td-slide.active');
-  if (!active) return;
-  const nbId = active.getAttribute('data-nb-id');
-  const noteIdx = parseInt(active.getAttribute('data-note-idx') || '0');
+// Click task row to navigate
+document.getElementById('taskDisplay')?.addEventListener('click', (e) => {
+  const row = e.target.closest('.td-task-row');
+  if (!row) return;
+  const nbId = row.getAttribute('data-nb-id');
   if (nbId && state.notes[nbId]) {
     state.activeNotebook = nbId;
     saveState();
