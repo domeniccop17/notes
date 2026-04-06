@@ -3369,7 +3369,10 @@ document.getElementById('closePanelBtn').addEventListener('click', () => {
 document.querySelectorAll('.nb-launch-btn').forEach(btn => {
   btn.addEventListener('click', (e) => {
     e.stopPropagation();
-    navigator.clipboard.writeText('cd C:\\Bureau\\TBP\npython dashboard\\app.py');
+    navigator.clipboard.writeText('cd C:\\Bureau\\TBP\npython dashboard\\app.py').then(() => {
+      btn.textContent = '✅';
+      setTimeout(() => { btn.textContent = '🚀'; }, 1200);
+    });
   });
 });
 
