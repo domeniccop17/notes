@@ -63,7 +63,7 @@
     text-transform: uppercase;
   }
 
-  /* TASK DISPLAY — elegant ambient dashboard */
+  /* TASK DISPLAY â elegant ambient dashboard */
   .task-display {
     flex: 1;
     max-width: 580px;
@@ -161,7 +161,7 @@
     min-width: 0;
   }
 
-  /* Hover tooltip for full text — lives on .task-display to escape overflow */
+  /* Hover tooltip for full text â lives on .task-display to escape overflow */
   #dashTooltip {
     position: absolute;
     top: calc(100% + 6px);
@@ -993,7 +993,7 @@
     transition: width 0.3s, background 0.3s;
   }
 
-  /* PRIORITY LEVELS — default is low (grey), indicator fixed to checkbox height */
+  /* PRIORITY LEVELS â default is low (grey), indicator fixed to checkbox height */
   .note-textarea .checklist-item::before {
     content: '';
     width: 2px;
@@ -1314,6 +1314,23 @@
     pointer-events: none;
     z-index: 10;
   }
+
+  .fleet-launch-btn {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 22px; height: 22px; border-radius: 6px; border: none;
+    background: rgba(108,92,231,0.15); color: #6c5ce7; font-size: 13px;
+    cursor: pointer; margin-left: 6px; transition: all 0.2s; padding: 0;
+    vertical-align: middle; position: relative;
+  }
+  .fleet-launch-btn:hover { background: rgba(108,92,231,0.35); transform: scale(1.1); }
+  .fleet-launch-btn .fleet-tooltip {
+    display: none; position: absolute; bottom: 130%; left: 50%; transform: translateX(-50%);
+    background: #2d3436; color: #dfe6e9; font-size: 10px; padding: 4px 8px;
+    border-radius: 6px; white-space: nowrap; pointer-events: none;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+  }
+  .fleet-launch-btn:hover .fleet-tooltip { display: block; }
+  .fleet-launch-btn.copied { background: rgba(0,206,201,0.25); color: #00cec9; }
 </style>
 </head>
 <body>
@@ -1321,7 +1338,7 @@
 <header>
   <div style="display:flex;align-items:center;gap:14px">
     <span class="logo">notes</span>
-    <button class="smart-record-btn" id="smartRecordBtn" title="Smart record (Alt+R)">● Record</button>
+    <button class="smart-record-btn" id="smartRecordBtn" title="Smart record (Alt+R)">â Record</button>
   </div>
   <div class="task-display" id="taskDisplay">
     <div class="task-display-inner" id="taskDisplayInner">
@@ -1332,13 +1349,13 @@
   <div class="timer-live" id="timerLive">
     <span class="timer-live-time" id="timerTime">00:00</span>
     <div class="timer-live-controls">
-      <button id="timerPauseBtn" title="Pause">⏸</button>
-      <button id="timerStopBtn" title="Stop">⏹</button>
+      <button id="timerPauseBtn" title="Pause">â¸</button>
+      <button id="timerStopBtn" title="Stop">â¹</button>
     </div>
   </div>
   <div class="header-actions">
     <div style="position:relative">
-      <button class="btn timer-btn" id="timerBtn" title="Timer">⏱ timer</button>
+      <button class="btn timer-btn" id="timerBtn" title="Timer">â± timer</button>
       <div class="timer-dropdown" id="timerDropdown">
         <div class="timer-presets">
           <button data-mins="5">5m</button>
@@ -1352,7 +1369,7 @@
         </div>
       </div>
     </div>
-    <button class="btn icon-btn" id="darkModeBtn" title="Toggle dark mode">☀️</button>
+    <button class="btn icon-btn" id="darkModeBtn" title="Toggle dark mode">âï¸</button>
     <button class="btn" id="addNotebookBtn">+ notebook</button>
     <button class="btn primary" id="addNoteBtn">+ note</button>
   </div>
@@ -1385,7 +1402,7 @@
       </div>
       <div style="display:flex;align-items:center;gap:12px">
         <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted)" id="noteCountLabel2"></div>
-        <button class="panel-close-btn" id="closePanelBtn" title="Close panel">×</button>
+        <button class="panel-close-btn" id="closePanelBtn" title="Close panel">Ã</button>
       </div>
     </div>
     <div class="notes-grid" id="notesGrid2"></div>
@@ -1399,15 +1416,15 @@
 <div class="ctx-menu hidden" id="ctxMenu"></div>
 
 <!-- LAST UPDATED -->
-<div id="lastUpdated">updated —</div>
+<div id="lastUpdated">updated â</div>
 
 <!-- FORMAT TOOLBAR -->
 <div class="format-toolbar" id="formatToolbar">
   <button class="format-btn" id="fmtBold" title="Gras" style="font-weight:900; color:#111; font-size:14px;">G</button>
-  <button class="format-btn" id="fmtUnderline" title="Souligné"><u style="text-underline-offset:3px;">S</u></button>
+  <button class="format-btn" id="fmtUnderline" title="SoulignÃ©"><u style="text-underline-offset:3px;">S</u></button>
   <button class="format-btn" id="fmtItalic" title="Italique" style="font-style:italic; font-size:14px;">I</button>
-  <button class="format-btn" id="fmtBullet" title="Liste à puces" style="font-size:22px; line-height:1;">•</button>
-  <button class="format-btn" id="fmtCheck" title="Checklist" style="font-size:13px; line-height:1;">☑</button>
+  <button class="format-btn" id="fmtBullet" title="Liste Ã  puces" style="font-size:22px; line-height:1;">â¢</button>
+  <button class="format-btn" id="fmtCheck" title="Checklist" style="font-size:13px; line-height:1;">â</button>
 </div>
 
 <!-- MODAL -->
@@ -1423,7 +1440,7 @@
 </div>
 
 <script>
-// — PALETTE ——————————————————————————————
+// â PALETTE ââââââââââââââââââââââââââââââ
 const COLORS = [
   '#FF1744','#2979FF','#00E676','#FF6D00','#D500F9',
   '#00E5FF','#FFEA00','#FF4081','#76FF03','#1DE9B6',
@@ -1432,80 +1449,80 @@ const COLORS = [
 ];
 
 const SYMBOLS = [
-  '●','♪','★','♥','◆','▲','■','☁','✿','$',
-  '☀','✦','♠','⬟','◉','✎','⚙','♦','◈','♫'
+  'â','âª','â','â¥','â','â²','â ','â','â¿','$',
+  'â','â¦','â ','â¬','â','â','â','â¦','â','â«'
 ];
 
-// Smart symbol categories — 20 symbols each, themed emoji where text symbols lack meaning
+// Smart symbol categories â 20 symbols each, themed emoji where text symbols lack meaning
 const SYMBOL_CATS = [
   { kw: ['music','song','audio','sound','band','playlist','beat','dj','radio','concert','album','instrument','piano','guitar','drum','vinyl','rap','jazz','rock','spotify'],
-    sym: ['♪','♫','♬','♩','🎵','🎶','🎸','🎹','🎺','🎻','🥁','🎷','🎤','🎧','🎼','♭','♮','♯','✦','✧'] },
+    sym: ['âª','â«','â¬','â©','ðµ','ð¶','ð¸','ð¹','ðº','ð»','ð¥','ð·','ð¤','ð§','ð¼','â­','â®','â¯','â¦','â§'] },
   { kw: ['money','finance','budget','bank','invest','pay','cost','price','profit','sales','tax','crypto','stock','trading','revenue','expense','wallet','fund','loan','saving'],
-    sym: ['$','€','£','¥','₿','¢','₹','₩','₪','₤','💰','💳','💵','💸','🏦','📊','📈','📉','◆','✦'] },
+    sym: ['$','â¬','Â£','Â¥','â¿','Â¢','â¹','â©','âª','â¤','ð°','ð³','ðµ','ð¸','ð¦','ð','ð','ð','â','â¦'] },
   { kw: ['travel','trip','flight','vacation','holiday','adventure','explore','tour','destination','airport','passport','backpack','abroad','cruise'],
-    sym: ['✈','⛵','⛰','⛱','⚓','⛺','🗺','🧳','🛫','🛬','🏖','🏔','🌍','🌎','🌏','🗼','🗽','🎒','🛳','🚀'] },
+    sym: ['â','âµ','â°','â±','â','âº','ðº','ð§³','ð«','ð¬','ð','ð','ð','ð','ð','ð¼','ð½','ð','ð³','ð'] },
   { kw: ['food','cook','recipe','meal','restaurant','eat','kitchen','bake','grocery','diet','lunch','dinner','breakfast','snack','cuisine'],
-    sym: ['🍕','🍔','🌮','🍜','🍣','🍱','🍰','🥗','🍳','🥙','🌯','🍝','🍛','🥘','☕','🫖','🍵','🥞','🧇','🧆'] },
+    sym: ['ð','ð','ð®','ð','ð£','ð±','ð°','ð¥','ð³','ð¥','ð¯','ð','ð','ð¥','â','ð«','ðµ','ð¥','ð§','ð§'] },
   { kw: ['code','dev','program','software','tech','api','debug','deploy','database','frontend','backend','git','python','react','javascript','html','css'],
-    sym: ['◈','⬡','✧','◉','⊛','⊕','■','▣','✦','⬢','⟨','⟩','◆','◇','▲','△','★','☆','✶','✸'] },
+    sym: ['â','â¬¡','â§','â','â','â','â ','â£','â¦','â¬¢','â¨','â©','â','â','â²','â³','â','â','â¶','â¸'] },
   { kw: ['school','study','class','course','lecture','exam','homework','university','college','learn','education','student','teacher','math','science','grade','tutor'],
-    sym: ['✎','✏','✐','✒','✑','📚','📖','📝','🎓','📐','📏','🔬','🧪','🧮','📓','📒','🏫','✦','★','❖'] },
+    sym: ['â','â','â','â','â','ð','ð','ð','ð','ð','ð','ð¬','ð§ª','ð§®','ð','ð','ð«','â¦','â','â'] },
   { kw: ['work','job','office','business','meeting','project','team','career','company','corporate','professional','client','deadline','report','email'],
-    sym: ['💼','📋','📊','📎','🗂','📁','📂','■','▣','◼','◆','❖','✦','◈','✧','◉','▲','★','☆','⬡'] },
+    sym: ['ð¼','ð','ð','ð','ð','ð','ð','â ','â£','â¼','â','â','â¦','â','â§','â','â²','â','â','â¬¡'] },
   { kw: ['game','gaming','play','xbox','playstation','nintendo','steam','esport','level','quest','rpg','fps','console','controller','gamer'],
-    sym: ['🎮','🕹','♠','♟','♞','♜','♛','🎲','🃏','♝','♚','♙','✖','◆','★','✦','◉','●','■','◇'] },
+    sym: ['ð®','ð¹','â ','â','â','â','â','ð²','ð','â','â','â','â','â','â','â¦','â','â','â ','â'] },
   { kw: ['home','house','apartment','room','furniture','decor','clean','bedroom','living','yard','rent','interior','move','cozy'],
-    sym: ['🏠','🏡','🛋','🪴','🏘','🛏','🚪','🪟','🧹','🧺','⬟','⬡','⬢','◆','■','◇','▣','△','✦','✧'] },
+    sym: ['ð ','ð¡','ð','ðª´','ð','ð','ðª','ðª','ð§¹','ð§º','â¬','â¬¡','â¬¢','â','â ','â','â£','â³','â¦','â§'] },
   { kw: ['health','fitness','gym','workout','exercise','run','yoga','medical','doctor','hospital','wellness','body','weight','muscle','cardio','diet'],
-    sym: ['💪','🏃','🧘','🏋','❤','🩺','💊','🏥','♥','✚','✛','✜','✢','❥','✦','★','◉','●','■','◇'] },
+    sym: ['ðª','ð','ð§','ð','â¤','ð©º','ð','ð¥','â¥','â','â','â','â¢','â¥','â¦','â','â','â','â ','â'] },
   { kw: ['art','design','creative','draw','paint','graphic','visual','style','fashion','animation','sketch','canvas','color','craft','diy'],
-    sym: ['🎨','🖌','✏','🖍','🎭','✦','✧','✶','✷','✹','❋','✸','✺','✻','✼','✽','✾','✿','❀','◆'] },
+    sym: ['ð¨','ð','â','ð','ð­','â¦','â§','â¶','â·','â¹','â','â¸','âº','â»','â¼','â½','â¾','â¿','â','â'] },
   { kw: ['photo','camera','picture','image','selfie','portrait','album','gallery','shot','lens','filter','photography'],
-    sym: ['📷','📸','🖼','🎞','📹','🤳','◉','●','◆','◇','✦','✧','★','☆','✶','✸','▲','△','⬡','⬢'] },
+    sym: ['ð·','ð¸','ð¼','ð','ð¹','ð¤³','â','â','â','â','â¦','â§','â','â','â¶','â¸','â²','â³','â¬¡','â¬¢'] },
   { kw: ['love','heart','relationship','date','dating','wedding','romance','valentine','couple','marriage','partner','crush','soulmate'],
-    sym: ['♥','❥','❦','❧','❣','💕','💖','💗','💘','💝','💞','💟','✦','★','✧','●','◉','◆','◇','▲'] },
+    sym: ['â¥','â¥','â¦','â§','â£','ð','ð','ð','ð','ð','ð','ð','â¦','â','â§','â','â','â','â','â²'] },
   { kw: ['nature','plant','garden','flower','tree','forest','green','outdoor','hike','mountain','environment','leaf','grow','botanical'],
-    sym: ['🌿','🌱','🌳','🌲','🍃','🍂','🌸','🌺','🌻','🌷','✿','❀','❁','❃','✾','❋','✽','✼','❂','◉'] },
+    sym: ['ð¿','ð±','ð³','ð²','ð','ð','ð¸','ðº','ð»','ð·','â¿','â','â','â','â¾','â','â½','â¼','â','â'] },
   { kw: ['ocean','sea','beach','wave','surf','marine','coast','shore','island','tropical','tide','coral'],
-    sym: ['🌊','🏖','🐚','🏝','⛱','🦀','🐙','🐳','🐋','🐬','⚓','⛵','🏄','🤿','🐠','🐟','🦈','🐡','🪸','🌴'] },
+    sym: ['ð','ð','ð','ð','â±','ð¦','ð','ð³','ð','ð¬','â','âµ','ð','ð¤¿','ð ','ð','ð¦','ð¡','ðª¸','ð´'] },
   { kw: ['aquarium','fish','tank','reef','coral','underwater','aquatic','koi','goldfish','tropical fish','marine life'],
-    sym: ['🐠','🐟','🐡','🦈','🐙','🐚','🦀','🦞','🦐','🐢','🐳','🐋','🐬','🦑','🪸','🐊','🦭','🌊','⚓','◉'] },
+    sym: ['ð ','ð','ð¡','ð¦','ð','ð','ð¦','ð¦','ð¦','ð¢','ð³','ð','ð¬','ð¦','ðª¸','ð','ð¦­','ð','â','â'] },
   { kw: ['book','read','write','journal','diary','blog','story','novel','author','library','literature','poem','chapter','publish'],
-    sym: ['📖','📚','📕','📗','📘','📙','📓','📒','📑','📜','✎','✏','✐','✑','✒','❖','✦','◆','✧','◈'] },
+    sym: ['ð','ð','ð','ð','ð','ð','ð','ð','ð','ð','â','â','â','â','â','â','â¦','â','â§','â'] },
   { kw: ['shop','store','buy','sell','market','product','retail','brand','commerce','order','deal','sale','purchase','delivery','cart'],
-    sym: ['🛒','🛍','🏪','🏬','💳','📦','🎁','🏷','◆','◇','❖','✦','✧','★','☆','◈','■','●','▲','△'] },
+    sym: ['ð','ð','ðª','ð¬','ð³','ð¦','ð','ð·','â','â','â','â¦','â§','â','â','â','â ','â','â²','â³'] },
   { kw: ['car','drive','vehicle','auto','road','transport','bike','motorcycle','truck','electric','gas','mechanic','engine','parking'],
-    sym: ['🚗','🚙','🏎','🛵','🏍','🚲','🚛','🚕','⛽','🔧','►','▶','◆','▲','■','●','✦','◉','★','△'] },
+    sym: ['ð','ð','ð','ðµ','ð','ð²','ð','ð','â½','ð§','âº','â¶','â','â²','â ','â','â¦','â','â','â³'] },
   { kw: ['pet','dog','cat','puppy','kitten','vet','hamster','rabbit','bunny','paw','collar','leash','adopt'],
-    sym: ['🐾','🦮','🐕','🐈','🐹','🐰','🐇','🦴','🐿','🐻','🦊','🐨','🦁','🐯','🦋','🐦','🐱','🐶','🐭','🐾'] },
+    sym: ['ð¾','ð¦®','ð','ð','ð¹','ð°','ð','ð¦´','ð¿','ð»','ð¦','ð¨','ð¦','ð¯','ð¦','ð¦','ð±','ð¶','ð­','ð¾'] },
   { kw: ['bird','parrot','eagle','owl','sparrow','feather','wing','fly','nest','avian','pigeon','hawk','falcon','crow'],
-    sym: ['🐦','🦜','🦅','🦉','🕊','🐓','🦆','🦩','🦚','🐧','🪶','🪺','◉','●','★','✦','◆','◇','▲','△'] },
+    sym: ['ð¦','ð¦','ð¦','ð¦','ð','ð','ð¦','ð¦©','ð¦','ð§','ðª¶','ðªº','â','â','â','â¦','â','â','â²','â³'] },
   { kw: ['space','star','moon','planet','universe','galaxy','astronaut','rocket','orbit','cosmos','astronomy','nasa','satellite'],
-    sym: ['🚀','🛸','🌙','⭐','🪐','🌌','👨‍🚀','🛰','☄','🌑','🌒','🌓','🌔','🌕','★','☆','✦','✧','✯','✰'] },
+    sym: ['ð','ð¸','ð','â­','ðª','ð','ð¨âð','ð°','â','ð','ð','ð','ð','ð','â','â','â¦','â§','â¯','â°'] },
   { kw: ['idea','think','brain','innovation','startup','launch','create','invent','spark','inspire','concept','strategy','vision','goal','dream'],
-    sym: ['💡','🧠','⚡','✨','🌟','🎯','✦','✧','★','☆','✯','✰','✶','❖','◈','✸','◉','●','◆','◇'] },
+    sym: ['ð¡','ð§ ','â¡','â¨','ð','ð¯','â¦','â§','â','â','â¯','â°','â¶','â','â','â¸','â','â','â','â'] },
   { kw: ['todo','to do','task','checklist','organize','schedule','calendar','agenda','reminder','priority','progress','plan'],
-    sym: ['✓','☐','📋','📌','🗓','⏰','📅','◉','■','★','✦','●','◆','✧','❖','▣','◇','▲','△','☆'] },
+    sym: ['â','â','ð','ð','ð','â°','ð','â','â ','â','â¦','â','â','â§','â','â£','â','â²','â³','â'] },
   { kw: ['cloud','sky','weather','rain','sun','storm','fog','snow','wind','forecast','climate','thunder','lightning','sunny','cloudy'],
-    sym: ['☁','⛅','⛈','☀','❄','🌧','🌦','🌤','⛄','🌪','🌈','🌩','💨','🌫','🌬','☂','⚡','✦','✧','◉'] },
+    sym: ['â','â','â','â','â','ð§','ð¦','ð¤','â','ðª','ð','ð©','ð¨','ð«','ð¬','â','â¡','â¦','â§','â'] },
   { kw: ['server','hosting','aws','azure','saas','infrastructure','network','backup','storage','kubernetes','docker','devops','deploy','ci','cd'],
-    sym: ['◈','⬡','◉','✧','⊛','⊕','■','✦','⬢','◆','◇','▲','△','★','☆','✶','✸','●','▣','⬟'] },
+    sym: ['â','â¬¡','â','â§','â','â','â ','â¦','â¬¢','â','â','â²','â³','â','â','â¶','â¸','â','â£','â¬'] },
   { kw: ['movie','film','cinema','watch','show','series','netflix','tv','documentary','anime','cartoon','episode','stream','trailer'],
-    sym: ['🎬','🎥','📺','🍿','🎞','📽','🎦','★','✦','☆','✧','✯','✶','✷','✸','◆','◉','●','■','◇'] },
+    sym: ['ð¬','ð¥','ðº','ð¿','ð','ð½','ð¦','â','â¦','â','â§','â¯','â¶','â·','â¸','â','â','â','â ','â'] },
   { kw: ['sport','football','soccer','basketball','baseball','tennis','hockey','swim','golf','boxing','athletic','track','marathon'],
-    sym: ['⚽','🏀','🏈','⚾','🎾','🏐','🏓','🏸','🥊','🏆','🥇','🎿','⛷','🏊','🚴','◉','●','★','✦','▲'] },
+    sym: ['â½','ð','ð','â¾','ð¾','ð','ð','ð¸','ð¥','ð','ð¥','ð¿','â·','ð','ð´','â','â','â','â¦','â²'] },
   { kw: ['party','celebrate','birthday','event','festival','fun','dance','bar','drink','beer','wine','cocktail','cheers','toast'],
-    sym: ['🎉','🎊','🥳','🎂','🎈','🥂','🍻','🎆','🎇','🪩','🍷','🍸','🍹','🍾','✦','✧','★','❋','✶','✸'] },
+    sym: ['ð','ð','ð¥³','ð','ð','ð¥','ð»','ð','ð','ðª©','ð·','ð¸','ð¹','ð¾','â¦','â§','â','â','â¶','â¸'] },
   { kw: ['security','lock','password','safe','protect','privacy','hack','cyber','defense','encrypt','firewall','key','auth','shield'],
-    sym: ['🔒','🔑','🛡','🔐','🔓','🗝','◆','■','◈','✦','▲','✧','◉','●','★','❖','◇','△','☆','✶'] },
+    sym: ['ð','ð','ð¡','ð','ð','ð','â','â ','â','â¦','â²','â§','â','â','â','â','â','â³','â','â¶'] },
   { kw: ['clap','hand','gesture','wave','point','fist','thumb','finger','grip','touch','slap','snap','palm','applause','launch'],
-    sym: ['👏','🤲','✋','👋','👊','🤛','🤜','👍','🖐','🤚','🙌','🫶','🫰','🤞','✌','☝','👆','💥','🚀','⚡'] },
+    sym: ['ð','ð¤²','â','ð','ð','ð¤','ð¤','ð','ð','ð¤','ð','ð«¶','ð«°','ð¤','â','â','ð','ð¥','ð','â¡'] },
   { kw: ['note','memo','sticky','jot','scribble','scratch','draft','record','log','entry','list','reminder'],
-    sym: ['📝','📒','📓','🗒','📑','🔖','📌','✎','✏','✐','✑','✒','❖','✦','◆','✧','◈','◉','●','■'] },
+    sym: ['ð','ð','ð','ð','ð','ð','ð','â','â','â','â','â','â','â¦','â','â§','â','â','â','â '] },
   { kw: ['fruit','apple','banana','orange','grape','berry','lemon','mango','watermelon','peach','pear','cherry','strawberry','pineapple'],
-    sym: ['🍎','🍌','🍊','🍇','🍓','🍋','🥭','🍉','🍑','🍐','🍒','🍍','🫐','🥝','🥥','🍈','🍏','🫒','🍅','🥑'] },
+    sym: ['ð','ð','ð','ð','ð','ð','ð¥­','ð','ð','ð','ð','ð','ð«','ð¥','ð¥¥','ð','ð','ð«','ð','ð¥'] },
   { kw: ['drink','coffee','tea','juice','soda','smoothie','water','milk','latte','espresso','brew','beverage','cup','mug'],
-    sym: ['☕','🍵','🧃','🥤','🧋','🫖','🥛','🍶','🍺','🍻','🥂','🍷','🍸','🍹','🍾','🧊','◉','●','✦','★'] },
+    sym: ['â','ðµ','ð§','ð¥¤','ð§','ð«','ð¥','ð¶','ðº','ð»','ð¥','ð·','ð¸','ð¹','ð¾','ð§','â','â','â¦','â'] },
 ];
 
 function usedSymbols(excludeId) {
@@ -1531,10 +1548,10 @@ function autoSymbol(name, excludeId) {
   for (const s of DEFAULT_SYMBOLS) {
     if (!taken.has(s)) return s;
   }
-  return '●';
+  return 'â';
 }
 
-const DEFAULT_SYMBOLS = ['●','○','◉','■','◆','◇','▲','△','★','☆','✦','✧','✶','✸','✿','❖','♠','♥','♪','◈'];
+const DEFAULT_SYMBOLS = ['â','â','â','â ','â','â','â²','â³','â','â','â¦','â§','â¶','â¸','â¿','â','â ','â¥','âª','â'];
 
 function suggestSymbols(name, count) {
   const n = count || 20;
@@ -1560,7 +1577,7 @@ function suggestSymbols(name, count) {
   return result;
 }
 
-// SVG monochrome filter — forces any symbol (including color emoji) to render in a target color
+// SVG monochrome filter â forces any symbol (including color emoji) to render in a target color
 function ensureMonoFilter(hex) {
   const id = 'mono-' + hex.replace('#','');
   if (document.getElementById(id)) return `url(#${id})`;
@@ -1603,16 +1620,16 @@ const PLACEHOLDERS = [
   'Write something', 'Jot it down'
 ];
 
-// — DARK MODE ————————————————————————————
+// â DARK MODE ââââââââââââââââââââââââââââ
 let darkMode = (() => { try { return localStorage.getItem('notes_dark_mode') === 'true'; } catch { return false; } })();
 
 function applyDarkMode() {
   if (darkMode) {
     document.documentElement.classList.add('dark');
-    document.getElementById('darkModeBtn').textContent = '🌙';
+    document.getElementById('darkModeBtn').textContent = 'ð';
   } else {
     document.documentElement.classList.remove('dark');
-    document.getElementById('darkModeBtn').textContent = '☀️';
+    document.getElementById('darkModeBtn').textContent = 'âï¸';
   }
   try { localStorage.setItem('notes_dark_mode', darkMode); } catch {}
 }
@@ -1624,7 +1641,7 @@ document.getElementById('darkModeBtn').addEventListener('click', () => {
 
 applyDarkMode();
 
-// — STATE ———————————————————————————————
+// â STATE âââââââââââââââââââââââââââââââ
 let state = loadState() || {
   notebooks: [
     { id: 'n1', name: 'TBP', color: COLORS[0] },
@@ -1644,7 +1661,7 @@ let state = loadState() || {
 
 // Auto-assign smart symbols to notebooks missing one, no duplicates
 state.notebooks.forEach(nb => {
-  if (!nb.symbol || nb.symbol === '●') nb.symbol = autoSymbol(nb.name, nb.id);
+  if (!nb.symbol || nb.symbol === 'â') nb.symbol = autoSymbol(nb.name, nb.id);
 });
 
 function makeNote(text='', tags=[]) {
@@ -1664,7 +1681,7 @@ function uid() { return Math.random().toString(36).slice(2,9); }
   if (typeof state.activeNotebook === 'undefined') state.activeNotebook = state.notebooks[0].id;
 })();
 
-// — AUTO-DELETE checked checkboxes after 15 min ——
+// â AUTO-DELETE checked checkboxes after 15 min ââ
 // Timestamps stored as data-checked-at attribute directly on each checklist item
 const AUTO_DELETE_MS = 4 * 60 * 60 * 1000;
 (function autoDeleteChecked() {
@@ -1679,12 +1696,12 @@ const AUTO_DELETE_MS = 4 * 60 * 60 * 1000;
       div.querySelectorAll('.checklist-item.checked').forEach(item => {
         const checkedAt = parseInt(item.getAttribute('data-checked-at'), 10);
         if (checkedAt && (now - checkedAt) >= AUTO_DELETE_MS) {
-          // Old enough — delete it
+          // Old enough â delete it
           item.remove();
           noteChanged = true;
           changed = true;
         } else if (!checkedAt) {
-          // No timestamp (checked before this feature) — stamp it now
+          // No timestamp (checked before this feature) â stamp it now
           item.setAttribute('data-checked-at', now);
           noteChanged = true;
           changed = true;
@@ -1698,7 +1715,7 @@ const AUTO_DELETE_MS = 4 * 60 * 60 * 1000;
   }
 })();
 
-// — Fix checkbox attribute to match .checked class (one-time migration) ——
+// â Fix checkbox attribute to match .checked class (one-time migration) ââ
 (function fixCheckboxAttributes() {
   let changed = false;
   for (const nbId in state.notes) {
@@ -1727,7 +1744,7 @@ const AUTO_DELETE_MS = 4 * 60 * 60 * 1000;
   }
 })();
 
-// — Hover progress tooltip for checked-off items ——
+// â Hover progress tooltip for checked-off items ââ
 (function initExpireTooltip() {
   const tip = document.createElement('div');
   tip.className = 'checklist-expire-tip';
@@ -1752,11 +1769,11 @@ const AUTO_DELETE_MS = 4 * 60 * 60 * 1000;
     const pct = Math.min(100, (elapsed / AUTO_DELETE_MS) * 100);
     const remaining = Math.max(0, AUTO_DELETE_MS - elapsed);
     tip.querySelector('.expire-label').textContent = remaining <= 0
-      ? fmtTime(AUTO_DELETE_MS) + ' / ' + fmtTime(AUTO_DELETE_MS) + '  ·  Done ✅'
-      : fmtTime(elapsed) + ' / ' + fmtTime(AUTO_DELETE_MS) + '  ·  ' + fmtTime(remaining) + ' left';
+      ? fmtTime(AUTO_DELETE_MS) + ' / ' + fmtTime(AUTO_DELETE_MS) + '  Â·  Done â'
+      : fmtTime(elapsed) + ' / ' + fmtTime(AUTO_DELETE_MS) + '  Â·  ' + fmtTime(remaining) + ' left';
     const fill = tip.querySelector('.expire-fill');
     fill.style.width = pct + '%';
-    // Color ramps green → amber → red
+    // Color ramps green â amber â red
     if (pct < 50) fill.style.background = '#4caf50';
     else if (pct < 80) fill.style.background = '#ff9800';
     else fill.style.background = '#e53935';
@@ -1797,7 +1814,7 @@ const AUTO_DELETE_MS = 4 * 60 * 60 * 1000;
   document.addEventListener('mouseout', e => {
     const item = e.target.closest('.checklist-item.checked');
     if (item && item === _hoveredItem) {
-      // Check if we're moving to a child — if so, stay
+      // Check if we're moving to a child â if so, stay
       const related = e.relatedTarget;
       if (related && item.contains(related)) return;
       _hoveredItem = null;
@@ -1806,7 +1823,7 @@ const AUTO_DELETE_MS = 4 * 60 * 60 * 1000;
   });
 })();
 
-// — Priority context menu for checklist items ——
+// â Priority context menu for checklist items ââ
 (function initPriorityMenu() {
   const menu = document.createElement('div');
   menu.className = 'priority-menu';
@@ -1880,7 +1897,7 @@ const AUTO_DELETE_MS = 4 * 60 * 60 * 1000;
   });
 })();
 
-// — Normalize AI checklist HTML to match expected structure ——
+// â Normalize AI checklist HTML to match expected structure ââ
 function normalizeChecklist(html) {
   const div = document.createElement('div');
   div.innerHTML = html;
@@ -1907,7 +1924,7 @@ function normalizeChecklist(html) {
   ).join('');
 }
 
-// — UNDO / REDO (structural actions only) ——
+// â UNDO / REDO (structural actions only) ââ
 // Text typing undo is handled natively by the browser (contenteditable).
 // This system only handles: AI edits, delete note, clear note, smart record.
 const undoStack = [];
@@ -1918,7 +1935,7 @@ let _undoRedoGuardTimer = null;
 
 function snapshotForUndo() {
   if (_isUndoRedoing) return;
-  // sync DOM → state
+  // sync DOM â state
   document.querySelectorAll('.note-textarea').forEach(ta => {
     const noteId = ta.closest('[data-note-id]')?.dataset.noteId;
     if (!noteId) return;
@@ -2005,7 +2022,7 @@ function loadState() {
   } catch { return null; }
 }
 
-// — TO DO progress helper ————————————————
+// â TO DO progress helper ââââââââââââââââ
 function getTodoProgress(nbId) {
   const notes = state.notes[nbId] || [];
   let total = 0, checked = 0;
@@ -2025,7 +2042,7 @@ function getTodoProgress(nbId) {
   return { total, checked };
 }
 
-// — RENDER SIDEBAR ————————————————————————
+// â RENDER SIDEBAR ââââââââââââââââââââââââ
 function isTodoNotebook(nb) {
   return nb.name.toLowerCase().replace(/\s+/g, '') === 'todo';
 }
@@ -2045,7 +2062,7 @@ function renderSidebar() {
     card.dataset.id = todoNb.id;
     card.innerHTML = `
       <div class="todo-fixed-header">
-        <div class="notebook-dot" style="${dotStyle(todoNb.symbol || '●', todoNb.color)}">${todoNb.symbol || '●'}</div>
+        <div class="notebook-dot" style="${dotStyle(todoNb.symbol || 'â', todoNb.color)}">${todoNb.symbol || 'â'}</div>
         <span class="todo-fixed-name">${escHtml(todoNb.name)}</span>
         <span class="todo-fixed-count">${p.checked}/${p.total}</span>
       </div>
@@ -2086,10 +2103,10 @@ function renderSidebar() {
       progressBar = `<div class="active-sidebar-bar"><div class="active-sidebar-fill" style="width:${pct}%"></div></div>`;
     }
     div.innerHTML = `
-      <div class="notebook-dot" style="${dotStyle(nb.symbol || '●', nb.color)}">${nb.symbol || '●'}</div>
-      <span class="notebook-name">${escHtml(nb.name)}</span>
+      <div class="notebook-dot" style="${dotStyle(nb.symbol || 'â', nb.color)}">${nb.symbol || 'â'}</div>
+      <span class="notebook-name">${escHtml(nb.name)}${nb.name === "TBP" ? '<button class="fleet-launch-btn" title="Launch FleetCC" onclick="event.stopPropagation();navigator.clipboard.writeText(\'cd C:\\\\Bureau\\\\TBP && python dashboard\\\\app.py\').then(()=>{this.classList.add(\'copied\');this.querySelector(\'.fleet-tooltip\').textContent=\'Copied!\';setTimeout(()=>{this.classList.remove(\'copied\');this.querySelector(\'.fleet-tooltip\').textContent=\'Launch FleetCC\'},1500)})">\u{1F680}<span class="fleet-tooltip">Launch FleetCC</span></button>' : ""}</span>
       <span class="notebook-count">${countDisplay}</span>
-      <button class="nb-split-btn${isSplit ? ' split-active' : ''}" title="Open beside">⊞</button>
+      <button class="nb-split-btn${isSplit ? ' split-active' : ''}" title="Open beside">â</button>
       ${progressBar}
     `;
     div.addEventListener('click', (e) => {
@@ -2134,7 +2151,7 @@ function renderSidebar() {
   regular.forEach(renderNbItem);
 }
 
-// — RENDER NOTES GRID —————————————————————
+// â RENDER NOTES GRID âââââââââââââââââââââ
 function renderPanel(nbId, gridEl, titleEl, countEl) {
   const nb = state.notebooks.find(n => n.id === nbId);
   if (!nb) return;
@@ -2209,14 +2226,14 @@ function renderPanel(nbId, gridEl, titleEl, countEl) {
         <div class="note-title-wrap">
           <div class="note-color-dot" style="background:${nb.color}"></div>
           <input class="note-title" value="${escHtml(note.title || 'Note ' + (idx+1))}" spellcheck="false" />
-          <button class="title-suggest-btn" title="AI title suggestions">✨</button>
+          <button class="title-suggest-btn" title="AI title suggestions">â¨</button>
           <span class="note-task-count" style="display:${_noteTaskCount ? 'inline' : 'none'}">${_noteTaskCount}</span>
         </div>
         <div class="note-actions">
-          <button class="note-list-btn" title="AI organize as checklist">☑</button>
-          <button class="note-mic-btn" title="Voice to text">🎤</button>
+          <button class="note-list-btn" title="AI organize as checklist">â</button>
+          <button class="note-mic-btn" title="Voice to text">ð¤</button>
           <button class="note-clear-btn" title="Clear note">clear</button>
-          <button class="note-delete-btn" title="Delete note">🗑</button>
+          <button class="note-delete-btn" title="Delete note">ð</button>
         </div>
         <div class="title-suggest-dropdown"></div>
       </div>
@@ -2303,7 +2320,7 @@ function renderPanel(nbId, gridEl, titleEl, countEl) {
     let _snapTimer = null;
     let _wasEmpty = !(note.text || '').trim();
     ta.addEventListener('input', () => {
-      // User is genuinely typing — re-enable undo snapshots
+      // User is genuinely typing â re-enable undo snapshots
       if (_isUndoRedoing) { _isUndoRedoing = false; clearTimeout(_undoRedoGuardTimer); }
       note.text = ta.innerHTML;
       debounceSave();
@@ -2366,7 +2383,7 @@ function renderPanel(nbId, gridEl, titleEl, countEl) {
       return null;
     }
 
-    // Backspace in checklist — remove empty item/sub in one press
+    // Backspace in checklist â remove empty item/sub in one press
     ta.addEventListener('keydown', e => {
       if (e.key === 'Backspace') {
         const sel = window.getSelection();
@@ -2430,7 +2447,7 @@ function renderPanel(nbId, gridEl, titleEl, countEl) {
         return;
       }
 
-      // Tab on empty checklist item → convert to sub-point
+      // Tab on empty checklist item â convert to sub-point
       if (e.key === 'Tab' && !e.shiftKey) {
         const sel = window.getSelection();
         const anchor = sel?.anchorNode;
@@ -2452,7 +2469,7 @@ function renderPanel(nbId, gridEl, titleEl, countEl) {
           sib = sib.previousElementSibling;
         }
 
-        // Convert checklist-item → checklist-sub
+        // Convert checklist-item â checklist-sub
         const subDiv = document.createElement('div');
         subDiv.className = 'checklist-sub';
         subDiv.innerHTML = `<span class="sub-num">${num}.</span><span>\u200B</span>`;
@@ -2483,7 +2500,7 @@ function renderPanel(nbId, gridEl, titleEl, countEl) {
         const span = sub.querySelector('span:not(.sub-num)');
         const text = span ? span.textContent.replace(/\u200B/g, '').trim() : '';
         if (text === '') {
-          // Empty sub → exit sub-point mode, create new checklist item
+          // Empty sub â exit sub-point mode, create new checklist item
           snapshotForUndo();
           const parent = findParentItem(sub);
           const newItem = document.createElement('div');
@@ -2501,7 +2518,7 @@ function renderPanel(nbId, gridEl, titleEl, countEl) {
           debounceSave();
           return;
         }
-        // Non-empty sub → create next numbered sub-point
+        // Non-empty sub â create next numbered sub-point
         snapshotForUndo();
         const curNum = sub.querySelector('.sub-num');
         const nextNum = curNum ? parseInt(curNum.textContent) + 1 : 1;
@@ -2531,7 +2548,7 @@ function renderPanel(nbId, gridEl, titleEl, countEl) {
 
       e.preventDefault();
 
-      // Enter on empty item → exit checklist mode
+      // Enter on empty item â exit checklist mode
       if (item) {
         const span = item.querySelector('span');
         const text = span ? span.textContent.replace(/\u200B/g, '').trim() : '';
@@ -2574,10 +2591,10 @@ function renderPanel(nbId, gridEl, titleEl, countEl) {
       debounceSave();
     });
 
-    // Copy button — fixed-positioned, never inside contenteditable
+    // Copy button â fixed-positioned, never inside contenteditable
     const copyBtn = document.createElement('button');
     copyBtn.className = 'checklist-copy-btn';
-    copyBtn.textContent = '⧉';
+    copyBtn.textContent = 'â§';
     copyBtn.title = 'Copy task text';
     document.body.appendChild(copyBtn);
     let _copyTarget = null;
@@ -2590,8 +2607,8 @@ function renderPanel(nbId, gridEl, titleEl, countEl) {
       const text = span ? span.textContent.replace(/[\u200B\u00A0\uFEFF]/g, '').trim() : '';
       if (text) {
         navigator.clipboard.writeText(text).then(() => {
-          copyBtn.textContent = '✓';
-          setTimeout(() => { copyBtn.textContent = '⧉'; }, 800);
+          copyBtn.textContent = 'â';
+          setTimeout(() => { copyBtn.textContent = 'â§'; }, 800);
         });
       }
     });
@@ -2634,7 +2651,7 @@ function renderPanel(nbId, gridEl, titleEl, countEl) {
     ta.addEventListener('focus', updateCopyBtn);
     ta.addEventListener('blur', () => { setTimeout(() => { copyBtn.classList.remove('visible'); _copyTarget = null; }, 150); });
 
-    // checkbox toggle — click checkbox to strike through + stamp timestamp
+    // checkbox toggle â click checkbox to strike through + stamp timestamp
     ta.addEventListener('change', e => {
       if (e.target.type === 'checkbox') {
         const item = e.target.closest('.checklist-item');
@@ -2673,7 +2690,7 @@ function renderPanel(nbId, gridEl, titleEl, countEl) {
       }
     });
 
-    // AI list button — organize note content (or selection) as checklist
+    // AI list button â organize note content (or selection) as checklist
     const listBtn = card.querySelector('.note-list-btn');
     listBtn.addEventListener('click', e => {
       e.stopPropagation();
@@ -2703,7 +2720,7 @@ function renderPanel(nbId, gridEl, titleEl, countEl) {
       }
       if (!content || content === '<br>') return;
 
-      // Separate checked (done) items — preserve them, only send unchecked to AI
+      // Separate checked (done) items â preserve them, only send unchecked to AI
       const contentDiv = document.createElement('div');
       contentDiv.innerHTML = content;
       const checkedItems = [...contentDiv.querySelectorAll('.checklist-item.checked')];
@@ -2758,7 +2775,7 @@ function renderPanel(nbId, gridEl, titleEl, countEl) {
         const savedCursorRange = hasCursor ? sel.getRangeAt(0).cloneRange() : null;
         const selectedText = hasSelection ? sel.toString().trim() : '';
 
-        // — stop active recording —
+        // â stop active recording â
         if (window._activeRec && window._activeMicBtn === micBtn) {
           window._activeRec.stop();
           return;
@@ -2913,7 +2930,7 @@ function renderPanel(nbId, gridEl, titleEl, countEl) {
       titleInput.value = '';
       note.text = '';
       note.tags = [];
-      // Keep the locked title — don't clear it
+      // Keep the locked title â don't clear it
       const curIdx = arr.indexOf(note);
       if (arr.length > 1 && curIdx < arr.length - 1) {
         arr.splice(curIdx, 1);
@@ -2982,7 +2999,7 @@ function renderNotes() {
   }
 }
 
-// — COLOR PICKER ——————————————————————————
+// â COLOR PICKER ââââââââââââââââââââââââââ
 let colorPickerTarget = null;
 function showColorPicker(anchor, nb) {
   const picker = document.getElementById('colorPicker');
@@ -3011,7 +3028,7 @@ function showColorPicker(anchor, nb) {
   });
   picker.appendChild(colorRow);
 
-  // Symbol section — smart suggestions based on notebook name
+  // Symbol section â smart suggestions based on notebook name
   const symLabel = document.createElement('div');
   symLabel.className = 'picker-section-label';
   symLabel.textContent = 'Symbol';
@@ -3019,7 +3036,7 @@ function showColorPicker(anchor, nb) {
 
   const suggestions = suggestSymbols(nb.name, 20);
   // Fallback: if no suggestions, show a default set
-  const syms = suggestions.length ? suggestions : ['●','📌','📋','💡','⭐','📎','🔖','📁','🗂️','📝','🎯','✨','🔔','📊','🏷️','🛠️','💬','📦','🧩','🔮'];
+  const syms = suggestions.length ? suggestions : ['â','ð','ð','ð¡','â­','ð','ð','ð','ðï¸','ð','ð¯','â¨','ð','ð','ð·ï¸','ð ï¸','ð¬','ð¦','ð§©','ð®'];
   const symRow = document.createElement('div');
   symRow.className = 'picker-row';
   syms.forEach(s => {
@@ -3048,7 +3065,7 @@ function showColorPicker(anchor, nb) {
   colorPickerTarget = nb;
 }
 
-// — CONTEXT MENUS —————————————————————————
+// â CONTEXT MENUS âââââââââââââââââââââââââ
 function showNotebookCtx(e, nb) {
   const menu = document.getElementById('ctxMenu');
   const isTodo = isTodoNotebook(nb);
@@ -3109,7 +3126,7 @@ function posCtx(menu, x, y) {
 
 function hideCtx() { document.getElementById('ctxMenu').classList.add('hidden'); }
 
-// — MODAL ————————————————————————————————
+// â MODAL ââââââââââââââââââââââââââââââââ
 let modalCb = null;
 function showModal(title, defaultVal, cb) {
   document.getElementById('modalTitle').textContent = title;
@@ -3135,7 +3152,7 @@ document.getElementById('modalInput').addEventListener('keydown', e => {
   if (e.key==='Escape') hideModal();
 });
 
-// — TOOLBAR ACTIONS ———————————————————————
+// â TOOLBAR ACTIONS âââââââââââââââââââââââ
 document.getElementById('addNotebookBtn').onclick = () => {
   showModal('New Notebook', '', val => {
     if (!val) return;
@@ -3158,13 +3175,13 @@ document.getElementById('addNoteBtn').onclick = () => {
   saveState(); renderNotes();
 };
 
-// — KEYBOARD SHORTCUTS ————————————————————
+// â KEYBOARD SHORTCUTS ââââââââââââââââââââ
 (function() {
   let spaceHeld = false;
   document.addEventListener('keydown', e => {
-    // Ctrl+Z / Ctrl+Y — always intercept, try native contenteditable undo first, then structural
+    // Ctrl+Z / Ctrl+Y â always intercept, try native contenteditable undo first, then structural
     if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
-      e.preventDefault(); // Always capture — we handle all undo ourselves
+      e.preventDefault(); // Always capture â we handle all undo ourselves
       const ce = e.target.closest('[contenteditable]');
       if (ce) {
         const before = ce.innerHTML;
@@ -3198,7 +3215,7 @@ document.getElementById('addNoteBtn').onclick = () => {
       return;
     }
     if ((e.ctrlKey || e.metaKey) && e.key === 'y') {
-      e.preventDefault(); // Always capture — we handle all redo ourselves
+      e.preventDefault(); // Always capture â we handle all redo ourselves
       const ce = e.target.closest('[contenteditable]');
       if (ce) {
         const before = ce.innerHTML;
@@ -3253,7 +3270,7 @@ document.getElementById('addNoteBtn').onclick = () => {
   });
 })();
 
-// — CLOSE POPUPS —————————————————————————
+// â CLOSE POPUPS âââââââââââââââââââââââââ
 document.addEventListener('click', e => {
   if (!e.target.closest('[data-color-trigger]') && !e.target.closest('#colorPicker') && !e.target.closest('.notebook-dot'))
     document.getElementById('colorPicker').classList.add('hidden');
@@ -3266,19 +3283,19 @@ document.addEventListener('contextmenu', e => {
   if (!e.target.closest('.notebook-item')) e.preventDefault();
 });
 
-// — DEBOUNCE ——————————————————————————————
+// â DEBOUNCE ââââââââââââââââââââââââââââââ
 let saveTimer;
 function debounceSave() { clearTimeout(saveTimer); saveTimer = setTimeout(saveState, 600); }
 
-// — HELPERS ———————————————————————————————
+// â HELPERS âââââââââââââââââââââââââââââââ
 function escHtml(s='') {
   return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
 // strip any leftover Upgrade notebook from previous versions
-state.notebooks = state.notebooks.filter(nb => nb.name !== '⚡ Upgrade');
+state.notebooks = state.notebooks.filter(nb => nb.name !== 'â¡ Upgrade');
 
-// — FORMAT TOOLBAR ————————————————————————
+// â FORMAT TOOLBAR ââââââââââââââââââââââââ
 (function() {
   const toolbar = document.getElementById('formatToolbar');
 
@@ -3343,7 +3360,7 @@ document.getElementById('closePanelBtn').addEventListener('click', () => {
   saveState(); render();
 });
 
-// — LAST UPDATED ——————————————————————————
+// â LAST UPDATED ââââââââââââââââââââââââââ
 Promise.all([
   fetch('https://api.github.com/repos/domeniccop17/notes/commits?per_page=1').then(r => r.json()).then(d => new Date(d[0].commit.committer.date)).catch(() => new Date(0)),
   fetch('https://api.github.com/repos/domeniccop17/notes-polish/commits?per_page=1').then(r => r.json()).then(d => new Date(d[0].commit.committer.date)).catch(() => new Date(0)),
@@ -3359,7 +3376,7 @@ Promise.all([
   document.getElementById('lastUpdated').textContent = 'updated ' + fmt;
 }).catch(() => {});
 
-// — SMART RECORD (Whisper) ————————————————
+// â SMART RECORD (Whisper) ââââââââââââââââ
 (function() {
   const btn = document.getElementById('smartRecordBtn');
   if (!navigator.mediaDevices?.getUserMedia) { btn.style.display = 'none'; return; }
@@ -3496,7 +3513,7 @@ Promise.all([
   function processSmartCommand(text, btn, savedSelRange, selectedText, selTA) {
       snapshotForUndo();
 
-      // ── SELECTION MODE: edit only selected text, no notebook/note creation ──
+      // ââ SELECTION MODE: edit only selected text, no notebook/note creation ââ
       if (savedSelRange && selectedText && selTA) {
         fetch('https://notes-polish.dcop14c.workers.dev', {
           method: 'POST',
@@ -3528,7 +3545,7 @@ Promise.all([
         return;
       }
 
-      // ── CHECKLIST TOGGLE: handle "done/check/complete/paid/finished/remove" commands locally ──
+      // ââ CHECKLIST TOGGLE: handle "done/check/complete/paid/finished/remove" commands locally ââ
       const checklistAction = (() => {
         const lower = text.toLowerCase();
         // Detect intent: checking off a task
@@ -3603,7 +3620,7 @@ Promise.all([
         // If no match found, fall through to AI smart mode
       }
 
-      // ── NORMAL SMART MODE — send full notes structure ──
+      // ââ NORMAL SMART MODE â send full notes structure ââ
       const activeNb = state.notebooks.find(n => n.id === state.activeNotebook);
       const MAX_CONTENT = 1000;
       const allNotebooks = state.notebooks.map(nb => ({
@@ -3638,13 +3655,13 @@ Promise.all([
       })
         .then(r => r.ok ? r.json() : Promise.reject())
         .then(data => {
-          // ── AI couldn't determine action — do nothing ──
+          // ââ AI couldn't determine action â do nothing ââ
           if (data.action === 'none') {
             btn.classList.remove('processing');
             return;
           }
 
-          // ── CHECK/UNCHECK checklist items across notebooks ──
+          // ââ CHECK/UNCHECK checklist items across notebooks ââ
           if (data.action === 'check' || data.action === 'uncheck') {
             const targetNb = data.notebook
               ? state.notebooks.find(n => n.name.toLowerCase() === data.notebook.toLowerCase())
@@ -3678,7 +3695,7 @@ Promise.all([
             return;
           }
 
-          // ── EDIT existing note (supports cross-notebook via data.notebook) ──
+          // ââ EDIT existing note (supports cross-notebook via data.notebook) ââ
           if (data.action === 'edit' || (data.noteIndex !== undefined && data.content)) {
             const editNbId = data.notebook
               ? (state.notebooks.find(n => n.name.toLowerCase() === data.notebook.toLowerCase())?.id || state.activeNotebook)
@@ -3695,7 +3712,7 @@ Promise.all([
             return;
           }
 
-          // ── If AI returned content but no action, and current notebook has notes → treat as edit on first non-empty note ──
+          // ââ If AI returned content but no action, and current notebook has notes â treat as edit on first non-empty note ââ
           if (!data.action && data.content && !data.notebook) {
             const notes = state.notes[state.activeNotebook] || [];
             const target = notes.find(n => n.text.trim());
@@ -3708,7 +3725,7 @@ Promise.all([
             }
           }
 
-          // ── CREATE new note ──
+          // ââ CREATE new note ââ
           let nbId;
           const nbName = data.notebook;
 
@@ -3756,24 +3773,24 @@ Promise.all([
   }
 })();
 
-// — MAIN RENDER ——————————————————————————
+// â MAIN RENDER ââââââââââââââââââââââââââ
 function render() {
   renderSidebar();
   renderNotes();
   updateTaskDisplay();
 }
 
-// — LIVE TASK DISPLAY ———————————————————
-// ── TASK DASHBOARD ──────────────────────────────
+// â LIVE TASK DISPLAY âââââââââââââââââââ
+// ââ TASK DASHBOARD ââââââââââââââââââââââââââââââ
 const MOTIVATIONAL = [
-  "Nothing pending — enjoy the calm.",
+  "Nothing pending â enjoy the calm.",
   "All caught up. Nice work.",
   "Clean slate. What's next?",
   "Zero tasks. Breathe easy.",
   "You're on top of everything.",
   "All done for now. Take a break.",
   "Clear mind, clear list.",
-  "Nothing to do — or is there?",
+  "Nothing to do â or is there?",
 ];
 
 let _dashTasks = [];
@@ -3792,7 +3809,7 @@ function collectDashTasks() {
     if (!nb.active && !isTodoNotebook(nb) && nb.id !== state.activeNotebook) continue;
     const nbName = nb.name;
     const nbColor = nb.color || 'var(--muted)';
-    const nbSymbol = nb.symbol || '●';
+    const nbSymbol = nb.symbol || 'â';
     const isTodo = isTodoNotebook(nb);
     (state.notes[nbId] || []).forEach((note, noteIdx) => {
       if (!note.text) return;
@@ -3826,7 +3843,7 @@ function collectDashTasks() {
 }
 
 function buildTaskRowHtml(task) {
-  const icon = task.pri >= 3 ? '🔴' : task.pri === 2 ? '🟠' : '⚪';
+  const icon = task.pri >= 3 ? 'ð´' : task.pri === 2 ? 'ð ' : 'âª';
   const escaped = task.text.replace(/"/g, '&quot;');
   let html = `<div class="td-task-row" data-nb-id="${task.nbId}" data-note-idx="${task.noteIdx}" data-item-idx="${task.itemIdx}" data-full-text="${escaped}">`;
   html += `<span class="td-pri-icon">${icon}</span>`;
@@ -4031,7 +4048,7 @@ document.getElementById('taskDisplay')?.addEventListener('click', (e) => {
 // Auto-refresh every 30s
 setInterval(updateTaskDisplay, 10000);
 
-// ── TIMER ───────────────────────────────────────
+// ââ TIMER âââââââââââââââââââââââââââââââââââââââ
 (function() {
   const btn = document.getElementById('timerBtn');
   const dropdown = document.getElementById('timerDropdown');
@@ -4061,7 +4078,7 @@ setInterval(updateTaskDisplay, 10000);
     remaining = mins * 60;
     endTime = Date.now() + remaining * 1000;
     paused = false;
-    pauseBtn.textContent = '⏸';
+    pauseBtn.textContent = 'â¸';
     btn.classList.add('running');
     live.classList.add('active');
     live.classList.remove('warning', 'danger', 'done');
@@ -4111,7 +4128,7 @@ setInterval(updateTaskDisplay, 10000);
     } catch(e) {}
     // Browser notification
     if (Notification && Notification.permission === 'granted') {
-      new Notification('Timer done!', { body: 'Your countdown has finished.', icon: '⏱' });
+      new Notification('Timer done!', { body: 'Your countdown has finished.', icon: 'â±' });
     }
     // Auto-stop after 5s of flashing
     setTimeout(() => {
@@ -4132,10 +4149,10 @@ setInterval(updateTaskDisplay, 10000);
     if (!interval && !paused) return;
     paused = !paused;
     if (paused) {
-      pauseBtn.textContent = '▶';
+      pauseBtn.textContent = 'â¶';
     } else {
       endTime = Date.now() + remaining * 1000;
-      pauseBtn.textContent = '⏸';
+      pauseBtn.textContent = 'â¸';
     }
   }
 
