@@ -3369,6 +3369,7 @@ document.getElementById('closePanelBtn').addEventListener('click', () => {
 document.querySelectorAll('.nb-launch-btn').forEach(btn => {
   btn.addEventListener('click', (e) => {
     e.stopPropagation();
+    navigator.clipboard.writeText('cd C:\\Bureau\\TBP\npython dashboard\\app.py');
     window.open('http://localhost:5000/', '_blank');
   });
 });
