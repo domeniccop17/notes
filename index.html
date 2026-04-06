@@ -624,6 +624,17 @@
     gap: 10px;
   }
 
+  .nb-launch-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 14px;
+    padding: 2px 4px;
+    margin-left: 6px;
+    opacity: 0.7;
+    transition: opacity 0.15s;
+  }
+  .nb-launch-btn:hover { opacity: 1; }
   #activeNotebookTitle {
     position: relative;
     padding-left: 18px;
@@ -1373,6 +1384,7 @@
     <div class="notes-topbar">
       <div class="notes-title">
         <span id="activeNotebookTitle"></span>
+        <button id="nbLaunchBtn" class="nb-launch-btn" title="Launch TBP Dashboard" style="display:none">🚀</button>
       </div>
       <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted)" id="noteCountLabel"></div>
     </div>
@@ -2142,6 +2154,11 @@ function renderPanel(nbId, gridEl, titleEl, countEl) {
 
   titleEl.textContent = nb.name;
   titleEl.style.setProperty('--nb-dot-color', nb.color);
+  // Show launch button only for TBP notebook
+  const launchBtn = document.getElementById('nbLaunchBtn');
+  if (launchBtn) {
+    launchBtn.style.display = nb.name.toUpperCase() === 'TBP' ? '' : 'none';
+  }
   titleEl.style.cursor = 'pointer';
   titleEl.title = 'Click to rename';
   titleEl.onclick = () => {
@@ -3344,7 +3361,15 @@ document.getElementById('closePanelBtn').addEventListener('click', () => {
   saveState(); render();
 });
 
-// Ã¢ÂÂ LAST UPDATED Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂÃ¢ÂÂ
+
+// — TBP Launch Button ——————————————————————
+document.getElementById('nbLaunchBtn')?.addEventListener('click', (e) => {
+  e.stopPropagation();
+  window.open('http://localhost:5000/', '_blank');
+  navigator.clipboard.writeText('cd C:\\Bureau\\TBP && python dashboard\\app.py').catch(() => {});
+});
+
+// — LAST UPDATED ——————————————————————————
 Promise.all([
   fetch('https://api.github.com/repos/domeniccop17/notes/commits?per_page=1').then(r => r.json()).then(d => new Date(d[0].commit.committer.date)).catch(() => new Date(0)),
   fetch('https://api.github.com/repos/domeniccop17/notes-polish/commits?per_page=1').then(r => r.json()).then(d => new Date(d[0].commit.committer.date)).catch(() => new Date(0)),
