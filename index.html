@@ -2109,9 +2109,11 @@ function renderSidebar() {
     div.addEventListener('click', (e) => {
       if (e.target.closest('.notebook-dot')) { showColorPicker(e.target.closest('.notebook-dot'), nb); return; }
       if (e.target.closest('.nb-split-btn')) {
+        if (!isSplit && nb.id === state.activeNotebook) return;
         state.secondaryNotebook = isSplit ? null : nb.id;
         saveState(); render(); return;
       }
+      if (nb.id === state.secondaryNotebook) state.secondaryNotebook = null;
       state.activeNotebook = nb.id; state.activeNote = 0; saveState(); render();
     });
     div.addEventListener('contextmenu', e => { e.preventDefault(); showNotebookCtx(e, nb); });
