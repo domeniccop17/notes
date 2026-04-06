@@ -3365,8 +3365,7 @@ document.getElementById('closePanelBtn').addEventListener('click', () => {
 // — TBP Launch Button ——————————————————————
 document.getElementById('nbLaunchBtn')?.addEventListener('click', (e) => {
   e.stopPropagation();
-  window.open('http://localhost:5000/', '_blank');
-  navigator.clipboard.writeText('cd C:\\Bureau\\TBP && python dashboard\\app.py').catch(() => {});
+  window.location.href = 'tbp://launch';
 });
 
 // — LAST UPDATED ——————————————————————————
