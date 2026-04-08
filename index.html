@@ -3375,8 +3375,8 @@ document.getElementById('closePanelBtn').addEventListener('click', () => {
 document.querySelectorAll('.nb-launch-btn').forEach(btn => {
   btn.addEventListener('click', (e) => {
     e.stopPropagation();
+    fetch('http://localhost:5001/launch').catch(() => {});
     navigator.clipboard.writeText('cd C:\\Bureau\\TBP\npython dashboard\\app.py');
-    window.location.href = 'tbp://launch';
     btn.textContent = '✅';
     setTimeout(() => { btn.textContent = '🚀'; }, 1200);
   });
